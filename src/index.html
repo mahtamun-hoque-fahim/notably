@@ -1,1 +1,321 @@
-<h1>Notably</h1><p>Your notes appear here.</p>
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notably Todo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,700&display=swap');
+
+        :root {
+            --bg-a: #fff8ec;
+            --bg-b: #e9f7f1;
+            --card: #fffcf7;
+            --ink: #1e2a2f;
+            --muted: #5c6a70;
+            --accent: #ef6c39;
+            --accent-soft: #ffd7c8;
+            --line: #d8e2df;
+            --ok: #1d7d63;
+            --danger: #bc3a2a;
+            --shadow: 0 10px 35px rgba(31, 42, 47, 0.12);
+            --radius: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 10% 0%, rgba(239, 108, 57, 0.2), transparent 40%),
+                radial-gradient(circle at 90% 10%, rgba(29, 125, 99, 0.22), transparent 44%),
+                linear-gradient(135deg, var(--bg-a), var(--bg-b));
+            display: grid;
+            place-items: center;
+            padding: 28px 16px;
+        }
+
+        .app {
+            width: min(760px, 100%);
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            animation: rise 600ms ease-out;
+        }
+
+        .hero {
+            padding: 28px 28px 18px;
+            border-bottom: 1px solid var(--line);
+            background:
+                linear-gradient(95deg, rgba(255, 215, 200, 0.75), rgba(233, 247, 241, 0.8));
+        }
+
+        .title {
+            margin: 0;
+            font-family: 'Fraunces', serif;
+            font-size: clamp(1.7rem, 3.2vw, 2.2rem);
+            letter-spacing: 0.015em;
+        }
+
+        .subtitle {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.96rem;
+        }
+
+        .composer {
+            padding: 18px 24px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(2px);
+        }
+
+        .input {
+            height: 48px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 0 14px;
+            font-size: 1rem;
+            font-family: inherit;
+            color: var(--ink);
+            background: #fff;
+        }
+
+        .input:focus {
+            outline: 2px solid rgba(239, 108, 57, 0.33);
+            outline-offset: 1px;
+            border-color: var(--accent);
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 12px;
+            height: 48px;
+            padding: 0 18px;
+            font-family: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 7px 20px rgba(239, 108, 57, 0.3);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--line);
+            height: 38px;
+            padding: 0 12px;
+            font-weight: 500;
+        }
+
+        .filters {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-pill {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--muted);
+            padding: 8px 14px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 150ms ease;
+        }
+
+        .filter-pill.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            color: #8f2f12;
+        }
+
+        .list {
+            margin: 0;
+            padding: 10px 14px 14px;
+            list-style: none;
+            display: grid;
+            gap: 8px;
+            min-height: 100px;
+        }
+
+        .item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff;
+            animation: fadeIn 220ms ease-out;
+        }
+
+        .check {
+            width: 22px;
+            height: 22px;
+            margin: 0;
+            accent-color: var(--ok);
+            cursor: pointer;
+        }
+
+        .item-text {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .item.done .item-text {
+            text-decoration: line-through;
+            color: #789087;
+        }
+
+        .delete {
+            border: 0;
+            background: #fff;
+            color: var(--danger);
+            font-size: 1.2rem;
+            line-height: 1;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .delete:hover {
+            background: #ffe4df;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 26px 14px;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            margin: 6px 0;
+            background: #fff;
+        }
+
+        .footer {
+            padding: 14px 24px 20px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .count {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero {
+                padding: 20px 18px 14px;
+            }
+
+            .composer,
+            .filters,
+            .footer {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .composer {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-primary {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="app" aria-label="Todo app">
+        <header class="hero">
+            <h1 class="title">Notably Todo</h1>
+            <p class="subtitle">Capture what matters, then clear it with intention.</p>
+        </header>
+
+        <form id="todo-form" class="composer" autocomplete="off">
+            <input id="todo-input" class="input" type="text" name="todo" placeholder="Add a task..." maxlength="180"
+                aria-label="New todo" required />
+            <button class="btn btn-primary" type="submit">Add Task</button>
+        </form>
+
+        <section class="filters" aria-label="Filter todos">
+            <button class="filter-pill active" data-filter="all" type="button">All</button>
+            <button class="filter-pill" data-filter="active" type="button">Active</button>
+            <button class="filter-pill" data-filter="completed" type="button">Completed</button>
+        </section>
+
+        <ul id="todo-list" class="list" aria-live="polite"></ul>
+
+        <footer class="footer">
+            <p id="items-left" class="count">0 left</p>
+            <button id="clear-completed" class="btn btn-ghost" type="button">Clear Completed</button>
+        </footer>
+    </main>
+
+    <script src="./app.js"></script>
+</body>
+
+</html>
