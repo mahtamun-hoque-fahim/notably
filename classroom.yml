@@ -1,0 +1,65 @@
+name: Git Quest — Auto-Grader
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  checks: write
+  contents: read
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Grade
+        run: |
+          echo "## ⚔️ Git Quest — Auto-Grade Report" >> $GITHUB_STEP_SUMMARY
+          PASS=0; FAIL=0; XP=0
+          pass() { PASS=$((PASS+1)); XP=$((XP+$1)); echo "✅ **PASS** — $2 (+$1 XP)" >> $GITHUB_STEP_SUMMARY; }
+          fail() { FAIL=$((FAIL+1)); echo "❌ **FAIL** — $1" >> $GITHUB_STEP_SUMMARY; }
+          echo "### Quest 1" >> $GITHUB_STEP_SUMMARY
+          git --version | grep -q "git version" && pass 2 "Git available" || fail "No git"
+          git config user.name | grep -q "." && pass 4 "user.name" || fail "No user.name"
+          git config user.email | grep -q "." && pass 4 "user.email" || fail "No user.email"
+          echo "### Quest 2" >> $GITHUB_STEP_SUMMARY
+          test -s README.md && pass 2 "README" || fail "No README"
+          test -s notes/release-notes.md && pass 2 "release-notes" || fail "No release-notes"
+          test -s notes/meeting-notes.md && pass 2 "meeting-notes" || fail "No meeting-notes"
+          test -s .gitignore && pass 2 "gitignore" || fail "No gitignore"
+          [ "$(git ls-files|wc -l)" -ge 5 ] && pass 2 "≥5 files" || fail "<5 files"
+          echo "### Quest 3" >> $GITHUB_STEP_SUMMARY
+          CC=$(git rev-list --count HEAD)
+          [ "$CC" -ge 6 ] && pass 5 "≥6 commits ($CC)" || fail "<6 commits ($CC)"
+          UF=$(git log --pretty=format: --name-only|sort -u|grep -cv '^$')
+          [ "$UF" -ge 4 ] && pass 3 "≥4 files touched" || fail "<4 files"
+          VC=$(git log --pretty=format:"%s"|grep -ciE '^(update|fix|changes|stuff|wip|test)$'||true)
+          [ "${VC:-0}" -eq 0 ] && pass 2 "Clear messages" || fail "Vague messages"
+          echo "### Quest 5" >> $GITHUB_STEP_SUMMARY
+          (git branch -a|grep -qi "readme.update"||git log --all --oneline|grep -qi "readme") && pass 3 "readme-update" || fail "No branch"
+          MC=$(git log --oneline --merges|wc -l)
+          [ "$MC" -ge 1 ] && pass 4 "Merge commit" || fail "No merge"
+          git log --merges --oneline|grep -qi "readme\|feature\|merge" && pass 3 "Merge msg" || fail "Bad merge msg"
+          echo "### Quest 6" >> $GITHUB_STEP_SUMMARY
+          (git branch -a|grep -qi "release.template"||git log --all --oneline|grep -qi "release.template") && pass 3 "release-template" || fail "No branch"
+          [ "$MC" -ge 2 ] && pass 4 "≥2 merges" || fail "<2 merges"
+          [ "$(cat notes/release-notes.md|wc -l)" -ge 5 ] && pass 3 "Content" || fail "Too short"
+          echo "### Quest 7" >> $GITHUB_STEP_SUMMARY
+          pass 10 "On GitHub!"
+          echo "### Quest 8" >> $GITHUB_STEP_SUMMARY
+          AC=$(git log --format="%aN"|sort -u|wc -l)
+          [ "$AC" -ge 2 ] && pass 10 "Multi-author ($AC)" || fail "Single author"
+          echo "### Quest 10" >> $GITHUB_STEP_SUMMARY
+          git tag|grep -q "v1.0" && pass 5 "v1.0 tag" || fail "No v1.0"
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **$PASS passed** / **$FAIL failed** — **$XP XP**" >> $GITHUB_STEP_SUMMARY
+          if [ "$XP" -ge 85 ]; then R="🏆 Grandmaster"; elif [ "$XP" -ge 60 ]; then R="🔧 Artisan"; elif [ "$XP" -ge 30 ]; then R="⚒️ Journeyman"; else R="📘 Apprentice"; fi
+          echo "- Rank: **$R**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          git log --oneline --graph --decorate --all|head -15 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          [ "$FAIL" -gt 5 ] && exit 1 || true
