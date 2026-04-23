@@ -1,2 +1,1 @@
-# notably
-Git Quest XP – notes app
+# Notably – Your Smart Notes App
