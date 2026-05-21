@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import { signOut } from "@/lib/auth-client";
 import {
   Plus,
   FileText,
@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
+  LogOut,
 } from "lucide-react";
 import type { Note, Folder as FolderType } from "@/lib/db/schema";
 
@@ -98,12 +99,22 @@ export function Sidebar({ activeNoteId }: SidebarProps) {
         >
           Notably
         </span>
-        <UserButton
-          appearance={{
-            variables: { colorPrimary: "#00e676" },
-            elements: { avatarBox: { width: 28, height: 28 } },
+        <button
+          onClick={() => signOut().then(() => router.push("/sign-in"))}
+          title="Sign out"
+          className="p-1 rounded transition-colors"
+          style={{ color: "var(--text-muted)" }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = "var(--text)";
+            (e.currentTarget as HTMLElement).style.background = "var(--surface-elevated)";
           }}
-        />
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
+            (e.currentTarget as HTMLElement).style.background = "transparent";
+          }}
+        >
+          <LogOut size={14} />
+        </button>
       </div>
 
       {/* New Note button */}

@@ -148,12 +148,8 @@ export const notes = pgTable("notes", {
 |---|---|---|
 | `DATABASE_URL` | ✅ | Neon pooled connection string |
 | `DATABASE_URL_UNPOOLED` | ✅ | Neon direct connection (migrations) |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅ | Clerk public key |
-| `CLERK_SECRET_KEY` | ✅ | Clerk secret key |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | ✅ | `/sign-in` |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | ✅ | `/sign-up` |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | ✅ | `/app` |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | ✅ | `/app` |
+| `BETTER_AUTH_SECRET` | ✅ | BetterAuth signing secret (32+ chars) |
+| `BETTER_AUTH_URL` | ✅ | App base URL (e.g. https://notably.vercel.app) |
 | `NEXT_PUBLIC_APP_URL` | ✅ | Public base URL |
 | `OPENAI_API_KEY` | ⚠️ Phase 3 | Whisper transcription |
 | `CLOUDINARY_CLOUD_NAME` | ⚠️ Phase 3 | Audio file storage |
@@ -166,8 +162,8 @@ export const notes = pgTable("notes", {
 
 | Phase | Name | Status | Key Tasks |
 |---|---|---|---|
-| 1 | Core Notes + Auth | 🔄 | Clerk auth, Neon/Drizzle, note CRUD, sidebar, editor |
-| 2 | Voice Transcription | ⏳ | `useVoiceRecorder` hook, Web Speech API, mic button, waveform |
+| 1 | Core Notes + Auth | ✅ | BetterAuth (email/password), Neon/Drizzle, note CRUD, sidebar, editor |
+| 2 | Voice Transcription | ✅ | `useVoiceRecorder` hook, Web Speech API, floating mic button, waveform, interim preview |
 | 3 | Whisper + Audio | ⏳ | OpenAI Whisper API, Cloudinary audio upload, re-transcription |
 | 4 | Search + Polish | ⏳ | Full-text search, tags, keyboard shortcuts, Lighthouse audit |
 
@@ -185,7 +181,8 @@ export const notes = pgTable("notes", {
 
 ## Decisions Log
 
-- **2025-05-20** — Auth: Clerk (new project default). Simple cookie auth ruled out due to multi-device requirement.
-- **2025-05-20** — Voice: Web Speech API first (free, no API key), Whisper as Phase 3 upgrade.
+- **2025-05-20** — Auth: BetterAuth + Drizzle adapter + email/password. Clerk was scaffolded in Phase 1 and removed before deployment in favour of BetterAuth (no third-party dependency, full control over sign-in UI).
+- **2025-05-20** — Voice: Web Speech API (browser-native, free). Whisper added in Phase 3 as accuracy upgrade.
 - **2025-05-20** — DB: `wordCount` stored as `text` to avoid integer migration friction; parsed to number on client.
 - **2025-05-20** — Auto-save: 800ms debounce on title + content changes. No manual save button.
+- **2025-05-20** — Voice interim: shown inline in content textarea (readOnly during recording) and in status bar. Final transcript appended to content on `isFinal` event.

@@ -32,6 +32,13 @@ npm run dev
 
 See `.env.example` for all required variables. Full descriptions in `PLANNER.md`.
 
+Key vars:
+- `DATABASE_URL` — Neon pooled URL
+- `DATABASE_URL_UNPOOLED` — Neon direct URL (migrations only)
+- `BETTER_AUTH_SECRET` — random 32+ char string
+- `BETTER_AUTH_URL` — deployed app URL
+- `NEXT_PUBLIC_APP_URL` — same as above
+
 ## Commands
 
 ```bash

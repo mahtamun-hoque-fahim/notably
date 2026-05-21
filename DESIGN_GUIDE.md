@@ -146,9 +146,51 @@ No heavy animations. Recording pulse (Phase 2): `animate-pulse` on mic ring.
 
 ---
 
-## Phase 2 Additions (Voice Recorder)
+## Phase 2 — Voice Recorder (implemented)
 
-- Mic button: circular, `border-2 border-[--border]`, hover `border-[--accent]`
-- Recording active: green ring pulse `ring-2 ring-[--accent] animate-pulse`
-- Waveform bars: 5 bars, heights animated with CSS keyframes, color `var(--accent)`
-- Status badge: "Listening…" in `--accent`, "Transcribing…" in `--text-muted`
+### Floating Mic Button
+```tsx
+// Wrapper (bottom-right of editor, position absolute)
+width: 52px, height: 52px, rounded-full
+background idle:    var(--surface-elevated), border: var(--border)
+background active:  var(--accent),           border: var(--accent)
+shadow-lg
+
+// Inner MicButton icon
+color idle:    var(--text-muted)
+color active:  #000 (inverted against green bg)
+color error:   var(--destructive)
+
+// "Recording" pill label above button when active
+bg: var(--surface), border: var(--accent), color: var(--accent)
+text-xs px-2 py-1 rounded-full
+```
+
+### Voice Status Bar (slides in below toolbar when active)
+```tsx
+// Listening state
+background: var(--accent-dim); border-bottom: var(--border)
+Left: <Waveform active /> + "Listening…" or interim text in var(--accent)
+
+// Error state  
+background: var(--destructive-dim)
+Left: <AlertCircle /> + error message in var(--destructive)
+Auto-dismisses after 4 seconds
+```
+
+### Waveform Component
+```tsx
+10 bars, 2px wide, rounded-full
+Idle: height 4px, color var(--text-disabled)
+Active: CSS keyframe waveBar, min/max heights vary per bar
+Animation: staggered delay per bar (i * 0.05s), duration 0.6–1.4s
+```
+
+### Content Textarea While Recording
+```tsx
+readOnly: true
+color: var(--text-muted)   ← dims to indicate read-only
+cursor: default
+Shows content + " " + interim preview in real-time
+On stop: final text appended, textarea becomes editable again
+```
