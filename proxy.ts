@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/api/auth"];
+const PUBLIC_PREFIXES = ["/sign-in", "/sign-up", "/api/auth", "/demo"];
+const PUBLIC_EXACT = ["/"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const isPublic =
+    PUBLIC_EXACT.includes(pathname) ||
+    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+
   if (isPublic) return NextResponse.next();
 
   const sessionToken =
