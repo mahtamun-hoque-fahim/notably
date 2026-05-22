@@ -165,7 +165,7 @@ export const notes = pgTable("notes", {
 | 1 | Core Notes + Auth | ✅ | BetterAuth (email/password), Neon/Drizzle, note CRUD, sidebar, editor |
 | 2 | Voice Transcription | ✅ | `useVoiceRecorder` hook, Web Speech API, floating mic button, waveform, interim preview |
 | 3 | Whisper + Audio | ✅ | MediaRecorder parallel capture, Cloudinary audio upload, OpenAI Whisper re-transcription, fallback mode |
-| 4 | Search + Polish | ⏳ | Full-text search, tags, keyboard shortcuts, Lighthouse audit |
+| 4 | Search + Polish | ✅ | Full-text search (ILIKE), ⌘K search bar, ⌘N shortcut, folder note counts, empty state, auto-focus title |
 
 ---
 

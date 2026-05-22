@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.6.11",
     "dotenv": "^17.4.2",
