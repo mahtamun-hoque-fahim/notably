@@ -6,12 +6,15 @@ export type RecordingStatus =
   | "idle"
   | "requesting"
   | "listening"
-  | "processing"
+  | "uploading"
+  | "transcribing"
   | "error";
 
 interface UseVoiceRecorderOptions {
   onTranscript: (text: string, isFinal: boolean) => void;
+  onAudioReady?: (blob: Blob) => void;
   onError?: (msg: string) => void;
+  useWhisperFallback?: boolean; // if true, skip Web Speech API and use Whisper only
 }
 
 interface UseVoiceRecorderReturn {
@@ -20,9 +23,9 @@ interface UseVoiceRecorderReturn {
   start: () => void;
   stop: () => void;
   isSupported: boolean;
+  isSpeechApiSupported: boolean;
 }
 
-// Augment window for webkit prefix
 declare global {
   interface Window {
     SpeechRecognition: typeof SpeechRecognition;
@@ -32,104 +35,149 @@ declare global {
 
 export function useVoiceRecorder({
   onTranscript,
+  onAudioReady,
   onError,
+  useWhisperFallback = false,
 }: UseVoiceRecorderOptions): UseVoiceRecorderReturn {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [interim, setInterim] = useState("");
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const isSupported =
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const isSpeechApiSupported =
     typeof window !== "undefined" &&
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
-  const stop = useCallback(() => {
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
-    setStatus("idle");
-    setInterim("");
+  const isSupported =
+    typeof window !== "undefined" && "mediaDevices" in navigator;
+
+  const stopMediaRecorder = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
   }, []);
 
-  const start = useCallback(() => {
-    if (!isSupported) {
-      onError?.("Voice input is not supported in this browser.");
+  const stop = useCallback(() => {
+    // Stop speech recognition
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+
+    // Stop media recorder — onstop will fire and deliver the blob
+    stopMediaRecorder();
+
+    setInterim("");
+  }, [stopMediaRecorder]);
+
+  const start = useCallback(async () => {
+    setStatus("requesting");
+    setInterim("");
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+    } catch {
+      onError?.("Microphone access denied. Please allow microphone permissions.");
       setStatus("error");
+      setTimeout(() => setStatus("idle"), 3000);
       return;
     }
 
-    setStatus("requesting");
+    // ── MediaRecorder (always runs — captures audio for Whisper) ──────────
+    audioChunksRef.current = [];
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : MediaRecorder.isTypeSupported("audio/webm")
+      ? "audio/webm"
+      : "audio/ogg";
 
-    const SpeechRecognitionClass =
-      window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    const mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorderRef.current = mediaRecorder;
 
-    const recognition = new SpeechRecognitionClass();
-    recognition.lang = "en-US";
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    recognition.continuous = true;
-    recognitionRef.current = recognition;
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
 
-    recognition.onstart = () => setStatus("listening");
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      audioChunksRef.current = [];
+      if (blob.size > 1000) {
+        onAudioReady?.(blob);
+      }
+    };
 
-    recognition.onresult = (event) => {
-      let interimText = "";
-      let finalText = "";
+    mediaRecorder.start(250); // collect in 250ms chunks
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalText += transcript;
-        } else {
-          interimText += transcript;
+    // ── Web Speech API (real-time, only if supported and not forced Whisper) ──
+    if (!useWhisperFallback && isSpeechApiSupported) {
+      const SpeechRecognitionClass =
+        window.SpeechRecognition ?? window.webkitSpeechRecognition;
+
+      const recognition = new SpeechRecognitionClass();
+      recognition.lang = "en-US";
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      recognition.continuous = true;
+      recognitionRef.current = recognition;
+
+      recognition.onstart = () => setStatus("listening");
+
+      recognition.onresult = (event) => {
+        let interimText = "";
+        let finalText = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) finalText += t;
+          else interimText += t;
         }
-      }
 
-      setInterim(interimText);
-
-      if (finalText) {
-        onTranscript(finalText, true);
-        setInterim("");
-      }
-    };
-
-    recognition.onerror = (event) => {
-      const msg =
-        event.error === "not-allowed"
-          ? "Microphone access denied. Please allow microphone permissions."
-          : event.error === "no-speech"
-          ? "No speech detected. Try again."
-          : `Voice error: ${event.error}`;
-      onError?.(msg);
-      setStatus("error");
-      recognitionRef.current = null;
-      setTimeout(() => setStatus("idle"), 3000);
-    };
-
-    recognition.onend = () => {
-      // Restart if still meant to be listening (continuous mode can cut off)
-      if (recognitionRef.current) {
-        try {
-          recognition.start();
-        } catch {
-          // Already started
+        setInterim(interimText);
+        if (finalText) {
+          onTranscript(finalText, true);
+          setInterim("");
         }
-      }
-    };
+      };
 
-    try {
-      recognition.start();
-    } catch {
-      onError?.("Could not start voice recognition.");
-      setStatus("error");
-      setTimeout(() => setStatus("idle"), 2000);
+      recognition.onerror = (event) => {
+        if (event.error === "no-speech") return; // non-fatal, keep recording
+        const msg =
+          event.error === "not-allowed"
+            ? "Microphone access denied."
+            : `Voice error: ${event.error}`;
+        onError?.(msg);
+      };
+
+      recognition.onend = () => {
+        // Restart if still meant to be listening
+        if (recognitionRef.current) {
+          try { recognition.start(); } catch { /* already started */ }
+        }
+      };
+
+      try {
+        recognition.start();
+      } catch {
+        onError?.("Could not start voice recognition.");
+      }
+    } else {
+      // Whisper-only mode — no real-time transcript, just show recording status
+      setStatus("listening");
     }
-  }, [isSupported, onTranscript, onError]);
+  }, [isSpeechApiSupported, useWhisperFallback, onTranscript, onAudioReady, onError]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
+      stopMediaRecorder();
     };
-  }, []);
+  }, [stopMediaRecorder]);
 
-  return { status, interim, start, stop, isSupported };
+  return { status, interim, start, stop, isSupported, isSpeechApiSupported };
 }

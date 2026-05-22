@@ -76,6 +76,7 @@ export const notes = pgTable("notes", {
   folderId: uuid("folder_id").references(() => folders.id, { onDelete: "set null" }),
   title: text("title").notNull().default("Untitled"),
   content: text("content").notNull().default(""),
+  audioUrl: text("audio_url"),
   isPinned: boolean("is_pinned").notNull().default(false),
   wordCount: text("word_count").notNull().default("0"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

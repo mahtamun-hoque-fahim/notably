@@ -13,7 +13,7 @@ interface MicButtonProps {
 
 export function MicButton({ status, onStart, onStop, disabled, invertOnActive }: MicButtonProps) {
   const isListening = status === "listening";
-  const isLoading = status === "requesting" || status === "processing";
+  const isLoading = status === "requesting" || status === "uploading" || status === "transcribing";
   const isError = status === "error";
 
   function handleClick() {
