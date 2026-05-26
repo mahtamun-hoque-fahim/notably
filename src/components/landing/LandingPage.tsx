@@ -33,17 +33,20 @@ function TickerBar() {
   );
 }
 
+// Deterministic bar heights — no Math.random(), no hydration mismatch
+const WAVEFORM_HEIGHTS = [10, 18, 28, 14, 32, 22, 16, 36, 12, 26,
+  30, 8, 24, 38, 20, 14, 32, 18, 28, 10, 22, 36, 16, 30, 12, 24, 20, 8];
+
 function WaveformDemo({ active }: { active: boolean }) {
-  const bars = Array.from({ length: 28 });
   return (
     <div className="flex items-center gap-[3px] h-10">
-      {bars.map((_, i) => (
+      {WAVEFORM_HEIGHTS.map((h, i) => (
         <div
           key={i}
           className="w-[3px] rounded-full"
           style={{
             background: active ? "#7C6FFF" : "#242436",
-            height: active ? `${Math.random() * 32 + 8}px` : "6px",
+            height: active ? `${h}px` : "6px",
             animation: active ? `waveform ${0.4 + (i % 5) * 0.12}s ease-in-out infinite ${i * 0.04}s` : "none",
             transition: "background 0.3s ease, height 0.3s ease",
           }}
@@ -130,7 +133,7 @@ export default function LandingPage() {
           <div className="w-7 h-7 rounded-lg bg-[#7C6FFF] flex items-center justify-center">
             <Mic size={14} className="text-white" />
           </div>
-          <span className="font-syne font-700 text-base tracking-tight">Notably</span>
+          <span className="font-syne font-bold text-base tracking-tight">Notably</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm text-[#6B6B85]">
           <a href="#features" className="hover:text-[#E8E8F0] transition-colors">Features</a>
@@ -159,7 +162,7 @@ export default function LandingPage() {
           </div>
 
           {/* Headline */}
-          <h1 className="font-syne text-5xl md:text-7xl lg:text-8xl font-800 leading-[0.95] tracking-tight">
+          <h1 className="font-syne text-5xl md:text-7xl lg:text-8xl font-extrabold leading-[0.95] tracking-tight">
             Voice notes,{" "}
             <span className="relative inline-block">
               <span className="text-[#7C6FFF]">instantly.</span>
@@ -242,7 +245,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center space-y-4 mb-16">
             <span className="text-xs font-mono tracking-widest uppercase text-[#7C6FFF]">Features</span>
-            <h2 className="font-syne text-4xl md:text-5xl font-700 tracking-tight">
+            <h2 className="font-syne text-4xl md:text-5xl font-bold tracking-tight">
               Built for speed,{" "}
               <span className="text-[#7C6FFF]">not complexity</span>
             </h2>
@@ -259,7 +262,7 @@ export default function LandingPage() {
                 <div className="w-9 h-9 rounded-lg bg-[#7C6FFF]/10 flex items-center justify-center text-[#7C6FFF] mb-4 group-hover:bg-[#7C6FFF]/20 transition-colors">
                   {f.icon}
                 </div>
-                <h3 className="font-syne font-600 text-base mb-2">{f.title}</h3>
+                <h3 className="font-syne font-semibold text-base mb-2">{f.title}</h3>
                 <p className="text-sm text-[#6B6B85] leading-relaxed">{f.body}</p>
               </div>
             ))}
@@ -272,7 +275,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center space-y-4 mb-16">
             <span className="text-xs font-mono tracking-widest uppercase text-[#7C6FFF]">Process</span>
-            <h2 className="font-syne text-4xl md:text-5xl font-700 tracking-tight">
+            <h2 className="font-syne text-4xl md:text-5xl font-bold tracking-tight">
               Four steps,{" "}
               <span className="text-[#7C6FFF]">zero friction</span>
             </h2>
@@ -280,11 +283,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {STEPS.map((s, i) => (
               <div key={i} className="flex gap-5 p-6 rounded-2xl border border-[#242436] bg-[#111118]">
-                <span className="font-mono text-3xl font-700 text-[#7C6FFF]/25 shrink-0 leading-none pt-1">
+                <span className="font-mono text-3xl font-bold text-[#7C6FFF]/25 shrink-0 leading-none pt-1">
                   {s.num}
                 </span>
                 <div>
-                  <h3 className="font-syne font-600 text-base mb-1.5">{s.label}</h3>
+                  <h3 className="font-syne font-semibold text-base mb-1.5">{s.label}</h3>
                   <p className="text-sm text-[#6B6B85] leading-relaxed">{s.detail}</p>
                 </div>
               </div>
@@ -302,7 +305,7 @@ export default function LandingPage() {
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#7C6FFF]/15 border border-[#7C6FFF]/20">
                 <Mic size={24} className="text-[#7C6FFF]" />
               </div>
-              <h2 className="font-syne text-4xl md:text-5xl font-700 tracking-tight">
+              <h2 className="font-syne text-4xl md:text-5xl font-bold tracking-tight">
                 Ready to speak?
               </h2>
               <p className="text-[#6B6B85] max-w-sm mx-auto">
@@ -327,7 +330,7 @@ export default function LandingPage() {
             <div className="w-5 h-5 rounded bg-[#7C6FFF]/20 flex items-center justify-center">
               <Mic size={10} className="text-[#7C6FFF]" />
             </div>
-            <span className="font-syne font-600 text-[#E8E8F0]">Notably</span>
+            <span className="font-syne font-semibold text-[#E8E8F0]">Notably</span>
             <span>— voice notes, no noise</span>
           </div>
           <div className="flex items-center gap-1">

@@ -42,7 +42,6 @@ function LimitRing({ used, total }: { used: number; total: number }) {
   const r = 20;
   const circ = 2 * Math.PI * r;
   const offset = circ * (1 - used / total);
-  const pct = Math.round((used / total) * 100);
   return (
     <div className="relative w-14 h-14 flex items-center justify-center">
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 48 48" fill="none">
@@ -57,7 +56,7 @@ function LimitRing({ used, total }: { used: number; total: number }) {
           style={{ transition: "stroke-dashoffset 0.4s ease" }}
         />
       </svg>
-      <span className="text-xs font-mono font-500 text-[#E8E8F0]">{used}/{total}</span>
+      <span className="text-xs font-mono font-medium text-[#E8E8F0]">{used}/{total}</span>
     </div>
   );
 }
@@ -251,7 +250,7 @@ export default function NotesApp() {
           <div className="w-6 h-6 rounded-md bg-[#7C6FFF]/15 flex items-center justify-center">
             <Mic size={12} className="text-[#7C6FFF]" />
           </div>
-          <span className="font-syne font-700 text-sm tracking-tight">Notably</span>
+          <span className="font-syne font-bold text-sm tracking-tight">Notably</span>
         </div>
         <LimitRing used={todayCount} total={10} />
       </header>
@@ -348,7 +347,7 @@ export default function NotesApp() {
         {/* Notes list */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-syne text-sm font-600 text-[#6B6B85] tracking-wide uppercase">
+            <h2 className="font-syne text-sm font-semibold text-[#6B6B85] tracking-wide uppercase">
               Today&rsquo;s Notes
             </h2>
             <span className="text-xs font-mono text-[#242436]">
