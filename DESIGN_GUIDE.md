@@ -105,6 +105,8 @@ Helper: `.serif { font-family: var(--font-instrument); font-style: italic; }`
 
 **Pro badge** — sage-pale pill with sparkle + "Pro" in the topbar for subscribers. **AI summary block** (note modal) — sage-pale rounded box: uppercase "AI summary" label with sparkle, italic serif summary line, and tag chips (`#tag`). **Tag chips on cards** — small sage-pale pills (max 3) under the card body. **Enhance button** — outline button with sparkle; shows a spinning ring while the LLM runs.
 
+**Export modal** — rows of icon-tiled options: copy/download (always) then a "Send to" group (email/Slack/Notion), each with a sage icon tile, title + description, and a right-side status (Pro tag · "Connect" · "Sending…" · check on success). **Integrations modal** — per-provider cards (Slack, Notion) with help text, credential inputs, and Connect/Disconnect; a green "Connected" marker when set.
+
 ---
 
 ## Animation / Transitions

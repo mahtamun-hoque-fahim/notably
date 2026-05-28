@@ -29,6 +29,7 @@
 - Auth: **Better Auth** (email + password, Drizzle adapter, 30-day sessions)
 - Billing: **Stripe** Checkout + customer portal + webhooks (Pro subscription)
 - Fallback transcription: **OpenAI Whisper** (`/api/transcribe`) for browsers without Web Speech
+- Export: copy/download Markdown (all users, client-side); **email (Resend), Slack (incoming webhook), Notion (internal integration)** for Pro
 - Fonts: Geist Sans (`geist` pkg) + Instrument Serif (`next/font/google`)
 - Deployment: Vercel (primary)
 
@@ -61,9 +62,12 @@
 │   │   ├── Recorder.tsx            # Web Speech + Whisper fallback + manual typing
 │   │   ├── NoteModal.tsx           # View / edit a saved note
 │   │   ├── UpgradeModal.tsx        # Quota hit → starts Stripe checkout
-│   │   └── AuthModal.tsx           # Sign in / create account
+│   │   ├── AuthModal.tsx           # Sign in / create account
+│   │   ├── ExportModal.tsx         # Copy/download (all) + email/slack/notion (Pro)
+│   │   └── IntegrationsModal.tsx   # Manage Slack webhook + Notion connection
 │   └── lib/
 │       ├── notes.ts                # Local note CRUD, quota, formatters
+│       ├── export.ts               # Client export: markdown / copy / download
 │       ├── useSpeech.ts            # Web Speech API hook (primary)
 │       ├── useMediaRecorder.ts     # MediaRecorder → Whisper hook (fallback)
 │       ├── useNotesStore.ts        # Dual-mode store (local ⇄ server)
@@ -72,11 +76,12 @@
 │       ├── stripe.ts               # Lazy Stripe client + billing config
 │       ├── db/
 │       │   ├── index.ts            # Edge-safe Neon HTTP db client
-│       │   └── schema.ts           # Drizzle schema (auth + app + stripe cols)
+│       │   └── schema.ts           # Drizzle schema (auth + app + stripe + integrations)
 │       └── actions/
 │           ├── notes.ts            # Server Actions: note CRUD + server quota
 │           ├── billing.ts          # Server Actions: checkout + customer portal
-│           └── enrich.ts           # Server Action: LLM title/summary/tags (Pro)
+│           ├── enrich.ts           # Server Action: LLM title/summary/tags (Pro)
+│           └── integrations.ts     # Server Actions: connections + export dispatch
 ├── drizzle/                        # Generated migrations
 ├── drizzle.config.ts
 ├── .env.example
@@ -128,8 +133,9 @@ Better Auth core tables:
 App tables:
 - `notes` — id, userId(fk, cascade), title, body, **summary** (AI, nullable), **tags** (AI, text[]), durationMs, lang, createdAt, updatedAt · index on userId
 - `usage` — id, userId(fk, cascade), date ("YYYY-MM-DD" local), count · **unique(userId, date)** → server-enforced daily quota
+- `integrations` — id, userId(fk, cascade), provider ('slack'|'notion'), config (JSON string of secrets) · **unique(userId, provider)**
 
-Migrations: `0000` (initial), `0001` (stripe columns), `0002` (note summary + tags). Apply with `npm run db:migrate`.
+Migrations: `0000` (initial), `0001` (stripe columns), `0002` (note summary + tags), `0003` (integrations). Apply with `npm run db:migrate`.
 
 **Local `Note` shape (`src/lib/notes.ts`):**
 ```ts
@@ -161,6 +167,10 @@ type Note = {
 | `startCheckoutAction()` | billing | Create a Stripe Checkout session → returns URL |
 | `openPortalAction()` | billing | Create a Stripe customer-portal session → returns URL |
 | `enrichNoteAction(id)` | enrich | **Pro:** LLM-generate title + summary + tags for a note |
+| `getConnectionsAction()` | integrations | Which providers are connected (no secrets) + email availability |
+| `saveSlackAction / saveNotionAction` | integrations | **Pro:** store a Slack webhook / Notion token+page |
+| `removeConnectionAction(provider)` | integrations | Disconnect a provider |
+| `exportNoteAction(id, target, email?)` | integrations | **Pro:** send a note to email / Slack / Notion |
 
 **Webhook events handled:** `checkout.session.completed` → set plan `pro`; `customer.subscription.updated` → `pro` if active/trialing else `free`; `customer.subscription.deleted` → `free`.
 
@@ -182,6 +192,8 @@ type Note = {
 | `STRIPE_WEBHOOK_SECRET` | Pro | Verifies incoming Stripe webhooks |
 | `OPENAI_API_KEY` | fallback + AI | Whisper transcription + note enrichment |
 | `OPENAI_ENRICH_MODEL` | optional | Model for enrichment (default `gpt-4o-mini`) |
+| `RESEND_API_KEY` | email export | Resend API key for emailing notes |
+| `EXPORT_FROM_EMAIL` | email export | Verified Resend "from" address |
 
 Tiers degrade independently: no DB → guest mode; DB but no Stripe → accounts + sync, no Pro; no OpenAI key → no cloud transcription fallback (manual typing instead).
 
@@ -196,7 +208,7 @@ See `.env.example`.
 | **Phase 1 — MVP** | ✅ Complete | Landing page; in-browser recorder (Web Speech); live transcript; save/edit/delete; search; 5/day quota + upgrade modal; localStorage persistence |
 | **Phase 2 — Accounts & sync** | ✅ Complete | Better Auth (email+password); Neon + Drizzle schema; Server Actions for notes & server-side quota; dual-mode store; cross-device sync; local→account import on sign-in |
 | **Phase 3 — Pro tier & fallback** | ✅ Complete | Stripe Checkout + customer portal + webhooks (plan sync); upgrade flow wired end-to-end; Pro badge + manage-subscription; Whisper `/api/transcribe` fallback + MediaRecorder capture for Firefox |
-| **Phase 4 — AI enrichment** | 🔄 In progress | ✅ LLM auto-title/summary/tags (Pro): auto on save + on-demand "Enhance" in note modal; tag chips on cards; tag/summary search. ⏳ speaker labels; export (Notion/Slack/email); admin + staff dashboards; OAuth + email verification |
+| **Phase 4 — AI + export** | 🔄 In progress | ✅ LLM auto-title/summary/tags (Pro); ✅ export: copy/download Markdown (all) + email/Slack/Notion (Pro) + Integrations manager. ⏳ speaker labels; admin + staff dashboards; OAuth + email verification |
 
 ---
 
@@ -209,4 +221,5 @@ See `.env.example`.
 5. Add email verification + password reset (wire Resend).
 6. Add OAuth providers (GitHub / Google) via Better Auth `socialProviders`.
 7. Add rate limiting on auth + transcribe + enrich endpoints (Upstash / Arcjet).
-8. Finish Phase 4: export integrations (Notion/Slack/email), speaker labels, admin + staff dashboards.
+8. Finish Phase 4: speaker labels, admin + staff dashboards (per reference design).
+9. Optional: upgrade Slack/Notion from paste-credentials to full OAuth connect flows.

@@ -193,6 +193,46 @@
 /* Tag chips on library cards */
 .cardTags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
 .cardTag { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--sage-pale); color: var(--sage-deep); }
+
+/* Export modal */
+.exportList { display: flex; flex-direction: column; gap: 10px; }
+.exportRow {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+  padding: 14px 16px; cursor: pointer; font-family: inherit; text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.exportRow:hover:not(:disabled) { border-color: var(--line-strong); background: var(--bg-elev); }
+.exportRow:disabled { opacity: 0.55; cursor: not-allowed; }
+.exportIcon {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--sage-pale); color: var(--sage-deep);
+}
+.exportText { flex: 1; }
+.exportText .t { font-size: 15px; font-weight: 500; color: var(--ink); }
+.exportText .d { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.exportStatus { font-size: 12px; color: var(--sage-deep); display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.exportStatus.muted { color: var(--ink-soft); }
+.proTag { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sage-deep); background: var(--sage-pale); border: 1px solid var(--sage-soft); padding: 3px 8px; border-radius: 999px; flex-shrink: 0; }
+.emailField { display: flex; gap: 8px; margin: 6px 0 4px; }
+.emailField input { flex: 1; height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--paper); font-family: inherit; font-size: 14px; color: var(--ink); outline: none; }
+.emailField input:focus { border-color: var(--sage); }
+.exportDivider { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin: 18px 0 10px; }
+.manageLink { text-align: center; margin-top: 16px; }
+.manageLink button { background: 0; border: 0; color: var(--sage-deep); font-family: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
+
+/* Integrations modal */
+.intGroup { border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+.intHead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.intHead .name { font-size: 16px; font-weight: 500; flex: 1; }
+.intHead .connected { font-size: 12px; color: var(--sage-deep); display: flex; align-items: center; gap: 5px; }
+.intHelp { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 12px; }
+.intHelp a { color: var(--sage-deep); }
+.intField { margin-bottom: 10px; }
+.intField input { width: 100%; height: 42px; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--paper); font-family: inherit; font-size: 14px; color: var(--ink); outline: none; }
+.intField input:focus { border-color: var(--sage); }
+.intActions { display: flex; gap: 8px; justify-content: flex-end; }
 .modalFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--bg-elev); }
 .modalMeta { font-size: 12.5px; color: var(--ink-soft); }
 

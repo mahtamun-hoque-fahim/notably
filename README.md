@@ -11,6 +11,7 @@ Voice-to-text note taking. Press record, talk, get clean searchable text back �
 - Neon (Postgres) + Drizzle ORM for synced notes
 - Stripe (Checkout + portal + webhooks) for the Pro tier
 - OpenAI: Whisper fallback (`/api/transcribe`) + Pro note enrichment (title/summary/tags)
+- Export: copy/download Markdown (all); email (Resend), Slack (webhook), Notion (Pro)
 - localStorage fallback for guests
 - Geist Sans + Instrument Serif
 - Deploy: Vercel
@@ -72,6 +73,10 @@ The app degrades gracefully — each tier is independent:
 - `OPENAI_API_KEY` — enables `/api/transcribe` (Firefox) and Pro note enrichment
 - `OPENAI_ENRICH_MODEL` — optional, defaults to `gpt-4o-mini`
 
+**Email export (Resend):**
+- `RESEND_API_KEY`, `EXPORT_FROM_EMAIL` — enable "email this note" for Pro
+- Slack & Notion export need no env vars — each Pro user connects their own (account menu → Integrations)
+
 Full details in `PLANNER.md` → Env Vars. See `.env.example`.
 
 ## Folder structure
@@ -79,8 +84,8 @@ Full details in `PLANNER.md` → Env Vars. See `.env.example`.
 ```
 src/
 ├── app/          # routes: / (landing), /app, /api/auth, /api/transcribe, /api/webhooks/stripe
-├── components/   # Recorder, NoteModal, UpgradeModal, AuthModal, Icons
-└── lib/          # notes, useSpeech, useMediaRecorder, useNotesStore, auth, stripe, db, actions (notes/billing/enrich)
+├── components/   # Recorder, NoteModal, UpgradeModal, AuthModal, ExportModal, IntegrationsModal, Icons
+└── lib/          # notes, export, useSpeech, useMediaRecorder, useNotesStore, auth, stripe, db, actions (notes/billing/enrich/integrations)
 drizzle/          # generated migrations
 ```
 

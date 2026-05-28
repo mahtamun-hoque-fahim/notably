@@ -107,3 +107,22 @@ export const usage = pgTable(
 
 export type DbNote = typeof notes.$inferSelect;
 export type NewDbNote = typeof notes.$inferInsert;
+
+// Stored per-user export connections. config is a JSON string holding the
+// provider's secret(s): Slack → { webhookUrl }; Notion → { token, parentPageId }.
+export const integrations = pgTable(
+  "integrations",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(), // 'slack' | 'notion'
+    config: text("config").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    byUserProvider: uniqueIndex("integrations_user_provider_idx").on(t.userId, t.provider),
+  })
+);

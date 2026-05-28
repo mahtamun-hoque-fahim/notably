@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import s from "./app.module.css";
 import Recorder from "@/components/Recorder";
 import NoteModal from "@/components/NoteModal";
 import UpgradeModal from "@/components/UpgradeModal";
 import AuthModal from "@/components/AuthModal";
+import ExportModal, { type Connections } from "@/components/ExportModal";
+import IntegrationsModal from "@/components/IntegrationsModal";
 import {
   CloudIcon,
   CreditCardIcon,
   LogOutIcon,
   MicFilled,
+  PlugIcon,
   SearchIcon,
   SparkleIcon,
   TrashIcon,
@@ -19,6 +22,7 @@ import {
 import { DAILY_FREE_LIMIT, formatDuration, formatRelative } from "@/lib/notes";
 import { useNotesStore } from "@/lib/useNotesStore";
 import { openPortalAction } from "@/lib/actions/billing";
+import { getConnectionsAction } from "@/lib/actions/integrations";
 import { signOut, useSession } from "@/lib/auth-client";
 
 export default function AppPage() {
@@ -29,6 +33,13 @@ export default function AppPage() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [exportId, setExportId] = useState<string | null>(null);
+  const [showIntegrations, setShowIntegrations] = useState(false);
+  const [connections, setConnections] = useState<Connections>({
+    slack: false,
+    notion: false,
+    emailConfigured: false,
+  });
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const isPro = store.plan === "pro";
@@ -61,6 +72,19 @@ export default function AppPage() {
     if (res.ok) window.location.href = res.url;
   }
 
+  // Load which export integrations are connected (signed-in only).
+  const reloadConnections = useCallback(async () => {
+    if (!store.signedIn) {
+      setConnections({ slack: false, notion: false, emailConfigured: false });
+      return;
+    }
+    setConnections(await getConnectionsAction());
+  }, [store.signedIn]);
+
+  useEffect(() => {
+    if (store.ready) void reloadConnections();
+  }, [store.ready, reloadConnections]);
+
   // Clean the ?upgraded=1 query param after returning from Stripe Checkout.
   // The webhook flips the plan; useSession/refresh will reflect it shortly.
   // Also support ?upgrade=1 (from the landing pricing CTA) to open the modal.
@@ -89,6 +113,7 @@ export default function AppPage() {
 
   // Derive the open note from the live store list so enrichment updates flow in.
   const active = activeId ? store.notes.find((n) => n.id === activeId) ?? null : null;
+  const exportNote = exportId ? store.notes.find((n) => n.id === exportId) ?? null : null;
 
   const userName = session?.user?.name || session?.user?.email?.split("@")[0] || "Account";
   const initials = (session?.user?.name || session?.user?.email || "?")
@@ -157,6 +182,12 @@ export default function AppPage() {
                         <SparkleIcon size={16} /> Upgrade to Pro
                       </button>
                     )}
+                    <button
+                      className={s.dropItem}
+                      onClick={() => { setMenuOpen(false); setShowIntegrations(true); }}
+                    >
+                      <PlugIcon size={16} /> Integrations
+                    </button>
                     <button className={s.dropItem} onClick={handleSignOut}>
                       <LogOutIcon size={16} /> Sign out
                     </button>
@@ -289,6 +320,26 @@ export default function AppPage() {
           onSave={(id, title, body) => void store.update(id, title, body)}
           onEnrich={store.enrich}
           onNeedUpgrade={() => { setActiveId(null); setShowUpgrade(true); }}
+          onExport={() => setExportId(active.id)}
+        />
+      )}
+      {exportNote && (
+        <ExportModal
+          note={exportNote}
+          isPro={isPro}
+          signedIn={store.signedIn}
+          connections={connections}
+          accountEmail={session?.user?.email}
+          onClose={() => setExportId(null)}
+          onNeedUpgrade={() => { setExportId(null); setShowUpgrade(true); }}
+          onManageIntegrations={() => { setExportId(null); setShowIntegrations(true); }}
+        />
+      )}
+      {showIntegrations && (
+        <IntegrationsModal
+          connections={connections}
+          onClose={() => setShowIntegrations(false)}
+          onChanged={() => void reloadConnections()}
         />
       )}
       {showUpgrade && (

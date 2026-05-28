@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import s from "../app/app/app.module.css";
-import { CloseIcon, CheckIcon, SparkleIcon } from "./Icons";
-import { formatDuration, formatRelative, type Note } from "@/lib/notes";
+import { CloseIcon, CheckIcon, SparkleIcon, ShareIcon } from "./Icons";
+import { type Note } from "@/lib/notes";
 
 export interface NoteModalProps {
   note: Note;
@@ -13,6 +13,7 @@ export interface NoteModalProps {
   onSave: (id: string, title: string, body: string) => void;
   onEnrich: (id: string) => Promise<{ ok: boolean; error?: string }>;
   onNeedUpgrade: () => void;
+  onExport: () => void;
 }
 
 export default function NoteModal({
@@ -23,6 +24,7 @@ export default function NoteModal({
   onSave,
   onEnrich,
   onNeedUpgrade,
+  onExport,
 }: NoteModalProps) {
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
@@ -112,7 +114,10 @@ export default function NoteModal({
         </div>
         <div className={s.modalFoot}>
           <div className={s.aiAction}>
-            {signedIn ? (
+            <button className={`btn outline ${s.enhanceBtn}`} onClick={onExport}>
+              <ShareIcon size={15} /> Export
+            </button>
+            {signedIn && (
               <button
                 className={`btn outline ${s.enhanceBtn}`}
                 onClick={handleEnhance}
@@ -122,13 +127,9 @@ export default function NoteModal({
                 {enriching ? (
                   <><span className={s.aiSpin} /> Enhancing…</>
                 ) : (
-                  <><SparkleIcon size={15} /> {hasAi ? "Re-enhance" : "Enhance with AI"}</>
+                  <><SparkleIcon size={15} /> {hasAi ? "Re-enhance" : "Enhance"}</>
                 )}
               </button>
-            ) : (
-              <span className={s.modalMeta}>
-                {formatRelative(note.createdAt)} · {formatDuration(note.durationMs)} · {note.lang}
-              </span>
             )}
           </div>
           <button className="btn primary" onClick={handleSave} disabled={!dirty}>

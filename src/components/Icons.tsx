@@ -151,3 +151,53 @@ export const CreditCardIcon = ({ size = 16, ...p }: IconProps) => (
     <path d="M2 10h20" />
   </svg>
 );
+
+export const DownloadIcon = ({ size = 18, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <path d="M12 3v12M7 11l5 4 5-4M5 21h14" />
+  </svg>
+);
+
+export const CopyIcon = ({ size = 18, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15V5a2 2 0 012-2h10" />
+  </svg>
+);
+
+export const MailIcon = ({ size = 18, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="M3 7l9 6 9-6" />
+  </svg>
+);
+
+export const SlackIcon = ({ size = 18, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <rect x="10" y="3" width="4" height="9" rx="2" />
+    <rect x="10" y="13" width="4" height="8" rx="2" />
+    <rect x="3" y="10" width="9" height="4" rx="2" />
+    <rect x="13" y="10" width="8" height="4" rx="2" />
+  </svg>
+);
+
+export const NotionIcon = ({ size = 18, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <path d="M5 4h10l4 4v12H5z" />
+    <path d="M9 9v6M9 9l6 6M15 9v6" />
+  </svg>
+);
+
+export const ShareIcon = ({ size = 18, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7" />
+    <path d="M12 3v13M8 7l4-4 4 4" />
+  </svg>
+);
+
+export const PlugIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 01-12 0z" />
+    <path d="M12 17v5" />
+  </svg>
+);
