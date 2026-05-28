@@ -26,6 +26,7 @@ import {
   updateNoteAction,
   type ActionNote,
 } from "@/lib/actions/notes";
+import { enrichNoteAction } from "@/lib/actions/enrich";
 
 function toNote(a: ActionNote): Note {
   return {
@@ -35,6 +36,8 @@ function toNote(a: ActionNote): Note {
     createdAt: a.createdAt,
     durationMs: a.durationMs,
     lang: a.lang,
+    summary: a.summary,
+    tags: a.tags,
   };
 }
 
@@ -51,6 +54,7 @@ export interface NotesStore {
   create: (text: string, durationMs: number, lang: string) => Promise<SaveResult>;
   update: (id: string, title: string, body: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  enrich: (id: string) => Promise<{ ok: boolean; error?: string }>;
   importLocal: () => Promise<void>;
   dismissImport: () => void;
 }
@@ -107,6 +111,19 @@ export function useNotesStore(): NotesStore {
         setNotes((prev) => [toNote(res.note), ...prev]);
         setUsed((u) => u + 1);
         setRemaining((r) => (plan === "pro" ? r : Math.max(0, r - 1)));
+        // Pro: enrich in the background; patch the note when it returns.
+        if (plan === "pro") {
+          const createdId = res.note.id;
+          void enrichNoteAction(createdId).then((e) => {
+            if (e.ok) {
+              setNotes((prev) =>
+                prev.map((n) =>
+                  n.id === createdId ? { ...n, title: e.title, summary: e.summary, tags: e.tags } : n
+                )
+              );
+            }
+          });
+        }
         return null;
       }
       if (quotaRemaining() <= 0) return "quota";
@@ -118,6 +135,22 @@ export function useNotesStore(): NotesStore {
       return null;
     },
     [signedIn, plan]
+  );
+
+  const enrich = useCallback(
+    async (id: string): Promise<{ ok: boolean; error?: string }> => {
+      const res = await enrichNoteAction(id);
+      if (res.ok) {
+        setNotes((prev) =>
+          prev.map((n) =>
+            n.id === id ? { ...n, title: res.title, summary: res.summary, tags: res.tags } : n
+          )
+        );
+        return { ok: true };
+      }
+      return { ok: false, error: res.error };
+    },
+    []
   );
 
   const update = useCallback(
@@ -180,6 +213,7 @@ export function useNotesStore(): NotesStore {
     create,
     update,
     remove,
+    enrich,
     importLocal,
     dismissImport,
   };

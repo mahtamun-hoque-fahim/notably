@@ -16,7 +16,7 @@ import {
   SparkleIcon,
   TrashIcon,
 } from "@/components/Icons";
-import { DAILY_FREE_LIMIT, formatDuration, formatRelative, type Note } from "@/lib/notes";
+import { DAILY_FREE_LIMIT, formatDuration, formatRelative } from "@/lib/notes";
 import { useNotesStore } from "@/lib/useNotesStore";
 import { openPortalAction } from "@/lib/actions/billing";
 import { signOut, useSession } from "@/lib/auth-client";
@@ -25,7 +25,7 @@ export default function AppPage() {
   const store = useNotesStore();
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
-  const [active, setActive] = useState<Note | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -79,9 +79,16 @@ export default function AppPage() {
     const q = query.trim().toLowerCase();
     if (!q) return store.notes;
     return store.notes.filter(
-      (n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q)
+      (n) =>
+        n.title.toLowerCase().includes(q) ||
+        n.body.toLowerCase().includes(q) ||
+        (n.summary?.toLowerCase().includes(q) ?? false) ||
+        (n.tags?.some((t) => t.toLowerCase().includes(q)) ?? false)
     );
   }, [store.notes, query]);
+
+  // Derive the open note from the live store list so enrichment updates flow in.
+  const active = activeId ? store.notes.find((n) => n.id === activeId) ?? null : null;
 
   const userName = session?.user?.name || session?.user?.email?.split("@")[0] || "Account";
   const initials = (session?.user?.name || session?.user?.email || "?")
@@ -238,7 +245,7 @@ export default function AppPage() {
         ) : (
           <div className={s.noteGrid}>
             {filtered.map((n) => (
-              <div key={n.id} className={`${s.noteCard} fade-up`} onClick={() => setActive(n)}>
+              <div key={n.id} className={`${s.noteCard} fade-up`} onClick={() => setActiveId(n.id)}>
                 <div className={s.noteCardTop}>
                   <div className={s.noteCardTitle}>{n.title}</div>
                   <button
@@ -252,7 +259,14 @@ export default function AppPage() {
                     <TrashIcon size={17} />
                   </button>
                 </div>
-                <div className={s.noteCardBody}>{n.body}</div>
+                <div className={s.noteCardBody}>{n.summary || n.body}</div>
+                {n.tags && n.tags.length > 0 && (
+                  <div className={s.cardTags}>
+                    {n.tags.slice(0, 3).map((t) => (
+                      <span key={t} className={s.cardTag}>#{t}</span>
+                    ))}
+                  </div>
+                )}
                 <div className={s.noteCardMeta}>
                   <span>{formatRelative(n.createdAt)}</span>
                   <span className={s.dot} />
@@ -269,8 +283,12 @@ export default function AppPage() {
       {active && (
         <NoteModal
           note={active}
-          onClose={() => setActive(null)}
+          signedIn={store.signedIn}
+          isPro={isPro}
+          onClose={() => setActiveId(null)}
           onSave={(id, title, body) => void store.update(id, title, body)}
+          onEnrich={store.enrich}
+          onNeedUpgrade={() => { setActiveId(null); setShowUpgrade(true); }}
         />
       )}
       {showUpgrade && (

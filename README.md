@@ -10,7 +10,7 @@ Voice-to-text note taking. Press record, talk, get clean searchable text back �
 - Better Auth (email + password) for accounts
 - Neon (Postgres) + Drizzle ORM for synced notes
 - Stripe (Checkout + portal + webhooks) for the Pro tier
-- OpenAI Whisper fallback (`/api/transcribe`) for browsers without Web Speech
+- OpenAI: Whisper fallback (`/api/transcribe`) + Pro note enrichment (title/summary/tags)
 - localStorage fallback for guests
 - Geist Sans + Instrument Serif
 - Deploy: Vercel
@@ -68,8 +68,9 @@ The app degrades gracefully — each tier is independent:
 - Add a Stripe webhook → `/api/webhooks/stripe` for `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
 - Enable the customer portal in the Stripe dashboard
 
-**Whisper fallback (Firefox etc.):**
-- `OPENAI_API_KEY` — enables `/api/transcribe`
+**Whisper fallback + AI enrichment (OpenAI):**
+- `OPENAI_API_KEY` — enables `/api/transcribe` (Firefox) and Pro note enrichment
+- `OPENAI_ENRICH_MODEL` — optional, defaults to `gpt-4o-mini`
 
 Full details in `PLANNER.md` → Env Vars. See `.env.example`.
 
@@ -79,7 +80,7 @@ Full details in `PLANNER.md` → Env Vars. See `.env.example`.
 src/
 ├── app/          # routes: / (landing), /app, /api/auth, /api/transcribe, /api/webhooks/stripe
 ├── components/   # Recorder, NoteModal, UpgradeModal, AuthModal, Icons
-└── lib/          # notes, useSpeech, useMediaRecorder, useNotesStore, auth, stripe, db, actions
+└── lib/          # notes, useSpeech, useMediaRecorder, useNotesStore, auth, stripe, db, actions (notes/billing/enrich)
 drizzle/          # generated migrations
 ```
 

@@ -77,6 +77,8 @@ export const notes = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     body: text("body").notNull(),
+    summary: text("summary"),
+    tags: text("tags").array(),
     durationMs: integer("duration_ms").notNull().default(0),
     lang: text("lang").notNull().default("en-US"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

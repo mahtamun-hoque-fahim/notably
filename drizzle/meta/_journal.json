@@ -15,6 +15,13 @@
       "when": 1779959491134,
       "tag": "0001_sleepy_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779960260101,
+      "tag": "0002_chunky_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

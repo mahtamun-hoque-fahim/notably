@@ -103,6 +103,8 @@ Helper: `.serif { font-family: var(--font-instrument); font-style: italic; }`
 
 **Import banner** — sage-pale band shown to signed-in users with local notes pending migration ("Import" / "Not now"). **Sync hint** — dashed `bg-elev` band shown to guests ("Sign in to sync").
 
+**Pro badge** — sage-pale pill with sparkle + "Pro" in the topbar for subscribers. **AI summary block** (note modal) — sage-pale rounded box: uppercase "AI summary" label with sparkle, italic serif summary line, and tag chips (`#tag`). **Tag chips on cards** — small sage-pale pills (max 3) under the card body. **Enhance button** — outline button with sparkle; shows a spinning ring while the LLM runs.
+
 ---
 
 ## Animation / Transitions

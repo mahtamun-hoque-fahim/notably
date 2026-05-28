@@ -8,6 +8,8 @@ export type Note = {
   createdAt: number;   // epoch ms
   durationMs: number;  // recording duration
   lang: string;        // e.g. "en-US"
+  summary?: string | null; // AI summary (Pro, server-only)
+  tags?: string[];     // AI tags (Pro, server-only)
 };
 
 const NOTES_KEY = "notably.notes.v1";

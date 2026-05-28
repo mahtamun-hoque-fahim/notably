@@ -75,7 +75,8 @@
 │       │   └── schema.ts           # Drizzle schema (auth + app + stripe cols)
 │       └── actions/
 │           ├── notes.ts            # Server Actions: note CRUD + server quota
-│           └── billing.ts          # Server Actions: checkout + customer portal
+│           ├── billing.ts          # Server Actions: checkout + customer portal
+│           └── enrich.ts           # Server Action: LLM title/summary/tags (Pro)
 ├── drizzle/                        # Generated migrations
 ├── drizzle.config.ts
 ├── .env.example
@@ -125,10 +126,10 @@ Better Auth core tables:
 - `verification` — id, identifier, value, expiresAt, timestamps
 
 App tables:
-- `notes` — id, userId(fk, cascade), title, body, durationMs, lang, createdAt, updatedAt · index on userId
+- `notes` — id, userId(fk, cascade), title, body, **summary** (AI, nullable), **tags** (AI, text[]), durationMs, lang, createdAt, updatedAt · index on userId
 - `usage` — id, userId(fk, cascade), date ("YYYY-MM-DD" local), count · **unique(userId, date)** → server-enforced daily quota
 
-Migrations: `drizzle/0000_*.sql` (initial), `drizzle/0001_*.sql` (stripe columns). Apply with `npm run db:migrate`.
+Migrations: `0000` (initial), `0001` (stripe columns), `0002` (note summary + tags). Apply with `npm run db:migrate`.
 
 **Local `Note` shape (`src/lib/notes.ts`):**
 ```ts
@@ -159,6 +160,7 @@ type Note = {
 | `importNotesAction(items)` | notes | Bulk-migrate local notes on first sign-in (quota-exempt) |
 | `startCheckoutAction()` | billing | Create a Stripe Checkout session → returns URL |
 | `openPortalAction()` | billing | Create a Stripe customer-portal session → returns URL |
+| `enrichNoteAction(id)` | enrich | **Pro:** LLM-generate title + summary + tags for a note |
 
 **Webhook events handled:** `checkout.session.completed` → set plan `pro`; `customer.subscription.updated` → `pro` if active/trialing else `free`; `customer.subscription.deleted` → `free`.
 
@@ -178,7 +180,8 @@ type Note = {
 | `STRIPE_SECRET_KEY` | Pro | Stripe secret key |
 | `STRIPE_PRICE_ID` | Pro | Price ID for the $5/mo Pro subscription |
 | `STRIPE_WEBHOOK_SECRET` | Pro | Verifies incoming Stripe webhooks |
-| `OPENAI_API_KEY` | fallback | Whisper transcription for non-WebSpeech browsers |
+| `OPENAI_API_KEY` | fallback + AI | Whisper transcription + note enrichment |
+| `OPENAI_ENRICH_MODEL` | optional | Model for enrichment (default `gpt-4o-mini`) |
 
 Tiers degrade independently: no DB → guest mode; DB but no Stripe → accounts + sync, no Pro; no OpenAI key → no cloud transcription fallback (manual typing instead).
 
@@ -193,7 +196,7 @@ See `.env.example`.
 | **Phase 1 — MVP** | ✅ Complete | Landing page; in-browser recorder (Web Speech); live transcript; save/edit/delete; search; 5/day quota + upgrade modal; localStorage persistence |
 | **Phase 2 — Accounts & sync** | ✅ Complete | Better Auth (email+password); Neon + Drizzle schema; Server Actions for notes & server-side quota; dual-mode store; cross-device sync; local→account import on sign-in |
 | **Phase 3 — Pro tier & fallback** | ✅ Complete | Stripe Checkout + customer portal + webhooks (plan sync); upgrade flow wired end-to-end; Pro badge + manage-subscription; Whisper `/api/transcribe` fallback + MediaRecorder capture for Firefox |
-| **Phase 4 — Power features** | ⏳ | Notion/Slack/email export; auto-titles/summaries/tags via LLM; speaker labels; admin + staff dashboards (per design ref); offline queue; OAuth + email verification |
+| **Phase 4 — AI enrichment** | 🔄 In progress | ✅ LLM auto-title/summary/tags (Pro): auto on save + on-demand "Enhance" in note modal; tag chips on cards; tag/summary search. ⏳ speaker labels; export (Notion/Slack/email); admin + staff dashboards; OAuth + email verification |
 
 ---
 
@@ -205,5 +208,5 @@ See `.env.example`.
 4. Test full flows: sign up → record → sync; quota hit → checkout → Pro → manage/cancel; Firefox → record → Whisper.
 5. Add email verification + password reset (wire Resend).
 6. Add OAuth providers (GitHub / Google) via Better Auth `socialProviders`.
-7. Add rate limiting on auth + transcribe endpoints (Upstash / Arcjet).
-8. Begin Phase 4: LLM auto-titles/summaries/tags, export integrations.
+7. Add rate limiting on auth + transcribe + enrich endpoints (Upstash / Arcjet).
+8. Finish Phase 4: export integrations (Notion/Slack/email), speaker labels, admin + staff dashboards.

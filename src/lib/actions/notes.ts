@@ -14,6 +14,8 @@ export type ActionNote = {
   durationMs: number;
   lang: string;
   createdAt: number;
+  summary: string | null;
+  tags: string[];
 };
 
 function genId(prefix: string): string {
@@ -34,6 +36,8 @@ function toActionNote(row: typeof notes.$inferSelect): ActionNote {
     durationMs: row.durationMs,
     lang: row.lang,
     createdAt: row.createdAt.getTime(),
+    summary: row.summary ?? null,
+    tags: row.tags ?? [],
   };
 }
 

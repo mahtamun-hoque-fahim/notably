@@ -168,6 +168,31 @@
   font-family: inherit; font-size: 16px; line-height: 1.65; color: var(--ink);
   border: 0; outline: none; background: transparent;
 }
+
+/* AI enrichment block in the modal */
+.aiBlock {
+  background: var(--sage-pale); border: 1px solid var(--sage-soft);
+  border-radius: 14px; padding: 14px 16px; margin-bottom: 18px;
+}
+.aiLabel {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--sage-deep); margin-bottom: 8px;
+}
+.aiSummary { font-family: var(--font-instrument), serif; font-style: italic; font-size: 18px; line-height: 1.4; color: var(--ink); margin-bottom: 12px; }
+.tagRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-size: 12px; padding: 4px 10px; border-radius: 999px;
+  background: var(--paper); border: 1px solid var(--sage-soft); color: var(--sage-deep);
+}
+.aiAction { display: flex; align-items: center; gap: 8px; }
+.enhanceBtn { gap: 7px; }
+.aiSpin { width: 14px; height: 14px; border: 2px solid var(--sage-soft); border-top-color: var(--sage-deep); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Tag chips on library cards */
+.cardTags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+.cardTag { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--sage-pale); color: var(--sage-deep); }
 .modalFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--bg-elev); }
 .modalMeta { font-size: 12.5px; color: var(--ink-soft); }
 
