@@ -97,6 +97,12 @@ Helper: `.serif { font-family: var(--font-instrument); font-style: italic; }`
 
 **Eyebrow pill** — sage-pale bg, sage-soft border, sage-deep text, small check dot.
 
+**Auth modal** (`AuthModal`) — segmented pill tabs (Sign in / Create account), stacked labelled inputs (44px, 12px radius), full-width primary submit, inline error band (`#fdecec`). Enter submits.
+
+**Account control** (topbar) — circular sage initials avatar + name in a pill button; click opens a dropdown (email + Sign out). Closes on outside click.
+
+**Import banner** — sage-pale band shown to signed-in users with local notes pending migration ("Import" / "Not now"). **Sync hint** — dashed `bg-elev` band shown to guests ("Sign in to sync").
+
 ---
 
 ## Animation / Transitions

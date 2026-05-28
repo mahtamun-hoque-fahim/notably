@@ -52,12 +52,18 @@ export function deleteNote(id: string): Note[] {
   return next;
 }
 
+// Wipe local notes — called after migrating them into a signed-in account.
+export function clearNotes(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(NOTES_KEY);
+}
+
 // ───────── Quota ─────────
 
 type Quota = { date: string; count: number };
 
-// "YYYY-MM-DD" in user's local timezone — resets at local midnight.
-function today(): string {
+// "YYYY-MM-DD" in the user's local timezone — quota resets at local midnight.
+export function localDateString(): string {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -66,15 +72,15 @@ function today(): string {
 }
 
 export function getQuota(): Quota {
-  if (typeof window === "undefined") return { date: today(), count: 0 };
+  if (typeof window === "undefined") return { date: localDateString(), count: 0 };
   try {
     const raw = localStorage.getItem(QUOTA_KEY);
-    if (!raw) return { date: today(), count: 0 };
+    if (!raw) return { date: localDateString(), count: 0 };
     const q = JSON.parse(raw) as Quota;
-    if (q.date !== today()) return { date: today(), count: 0 };
+    if (q.date !== localDateString()) return { date: localDateString(), count: 0 };
     return q;
   } catch {
-    return { date: today(), count: 0 };
+    return { date: localDateString(), count: 0 };
   }
 }
 

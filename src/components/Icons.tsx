@@ -132,3 +132,15 @@ export const BackIcon = ({ size = 18, ...p }: IconProps) => (
     <path d="M19 12H5M12 5l-7 7 7 7" />
   </svg>
 );
+
+export const LogOutIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+  </svg>
+);
+
+export const CloudIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <path d="M17.5 19a4.5 4.5 0 00.5-8.97A6 6 0 006 9.5a4.5 4.5 0 00-.5 9.5h12z" />
+  </svg>
+);

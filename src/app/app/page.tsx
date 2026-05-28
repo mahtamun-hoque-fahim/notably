@@ -1,80 +1,69 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import s from "./app.module.css";
 import Recorder from "@/components/Recorder";
 import NoteModal from "@/components/NoteModal";
 import UpgradeModal from "@/components/UpgradeModal";
-import { MicFilled, SearchIcon, TrashIcon } from "@/components/Icons";
+import AuthModal from "@/components/AuthModal";
 import {
-  autoTitle,
-  bumpQuota,
-  DAILY_FREE_LIMIT,
-  deleteNote,
-  formatDuration,
-  formatRelative,
-  getQuota,
-  loadNotes,
-  newId,
-  quotaRemaining,
-  saveNote,
-  updateNote,
-  type Note,
-} from "@/lib/notes";
+  CloudIcon,
+  LogOutIcon,
+  MicFilled,
+  SearchIcon,
+  TrashIcon,
+} from "@/components/Icons";
+import { DAILY_FREE_LIMIT, formatDuration, formatRelative, type Note } from "@/lib/notes";
+import { useNotesStore } from "@/lib/useNotesStore";
+import { signOut, useSession } from "@/lib/auth-client";
 
 export default function AppPage() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [remaining, setRemaining] = useState<number>(DAILY_FREE_LIMIT);
+  const store = useNotesStore();
+  const { data: session } = useSession();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<Note | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Load from localStorage after mount (avoids hydration mismatch).
+  const isPro = store.plan === "pro";
+  const canRecord = isPro || store.remaining > 0;
+
+  // Close account dropdown on outside click.
   useEffect(() => {
-    setNotes(loadNotes());
-    setRemaining(quotaRemaining());
-    setHydrated(true);
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  const usedToday = getQuota().count;
-  const canRecord = remaining > 0;
-
-  function handleSave(text: string, durationMs: number, lang: string) {
-    const note: Note = {
-      id: newId(),
-      title: autoTitle(text),
-      body: text,
-      createdAt: Date.now(),
-      durationMs,
-      lang,
-    };
-    setNotes(saveNote(note));
-    bumpQuota();
-    setRemaining(quotaRemaining());
+  async function handleSave(text: string, durationMs: number, lang: string) {
+    const res = await store.create(text, durationMs, lang);
+    if (res === "quota") setShowUpgrade(true);
+    if (res === "auth") setShowAuth(true);
   }
 
-  function handleQuotaHit() {
-    setShowUpgrade(true);
-  }
-
-  function handleDelete(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    setNotes(deleteNote(id));
-  }
-
-  function handleNoteSave(id: string, title: string, body: string) {
-    setNotes(updateNote(id, { title, body }));
+  async function handleSignOut() {
+    await signOut();
+    setMenuOpen(false);
+    window.location.reload();
   }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return notes;
-    return notes.filter(
+    if (!q) return store.notes;
+    return store.notes.filter(
       (n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q)
     );
-  }, [notes, query]);
+  }, [store.notes, query]);
+
+  const userName = session?.user?.name || session?.user?.email?.split("@")[0] || "Account";
+  const initials = (session?.user?.name || session?.user?.email || "?")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className={s.shell}>
@@ -84,38 +73,101 @@ export default function AppPage() {
             <span className={s.brandMic}><MicFilled size={11} /></span>
             notably
           </Link>
-          <div
-            className={`${s.quotaPill} ${hydrated && remaining <= 1 ? s.low : ""}`}
-            title="Free notes reset at midnight"
-          >
-            <span className={s.quotaDots}>
-              {Array.from({ length: DAILY_FREE_LIMIT }).map((_, i) => (
-                <span
-                  key={i}
-                  className={`${s.quotaDot} ${hydrated && i < usedToday ? s.used : ""}`}
-                />
-              ))}
-            </span>
-            {hydrated ? (
-              <span>
-                <b>{remaining}</b> of {DAILY_FREE_LIMIT} free notes left
-              </span>
-            ) : (
-              <span>&nbsp;</span>
+
+          <div className={s.topRight}>
+            {!isPro && (
+              <div
+                className={`${s.quotaPill} ${store.ready && store.remaining <= 1 ? s.low : ""}`}
+                title="Free notes reset at midnight"
+              >
+                <span className={s.quotaDots}>
+                  {Array.from({ length: DAILY_FREE_LIMIT }).map((_, i) => (
+                    <span
+                      key={i}
+                      className={`${s.quotaDot} ${store.ready && i < store.used ? s.used : ""}`}
+                    />
+                  ))}
+                </span>
+                {store.ready ? (
+                  <span><b>{store.remaining}</b> of {DAILY_FREE_LIMIT} free left</span>
+                ) : (
+                  <span>&nbsp;</span>
+                )}
+              </div>
+            )}
+
+            {store.ready && !store.signedIn && (
+              <button className="btn primary" onClick={() => setShowAuth(true)}>
+                Sign in
+              </button>
+            )}
+
+            {store.ready && store.signedIn && (
+              <div className={s.acctMenu} ref={menuRef}>
+                <button className={s.acctBtn} onClick={() => setMenuOpen((o) => !o)}>
+                  <span className={s.avatar}>{initials}</span>
+                  <span className={s.acctName}>{userName}</span>
+                </button>
+                {menuOpen && (
+                  <div className={s.dropdown}>
+                    <div className={s.dropEmail}>{session?.user?.email}</div>
+                    <button className={s.dropItem} onClick={handleSignOut}>
+                      <LogOutIcon size={16} /> Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
       </header>
 
       <main className={s.main}>
-        <Recorder canRecord={canRecord} onSave={handleSave} onQuotaHit={handleQuotaHit} />
+        {store.ready && store.signedIn && store.pendingImport > 0 && (
+          <div className={s.importBanner}>
+            <CloudIcon size={18} />
+            <span className={s.txt}>
+              You have <b>{store.pendingImport}</b> note{store.pendingImport > 1 ? "s" : ""} saved on
+              this device. Move them into your account?
+            </span>
+            <div className={s.importActions}>
+              <button className={`btn ghost ${s.btnSm}`} onClick={store.dismissImport}>
+                Not now
+              </button>
+              <button className={`btn primary ${s.btnSm}`} onClick={store.importLocal}>
+                Import
+              </button>
+            </div>
+          </div>
+        )}
+
+        {store.ready && !store.signedIn && (
+          <div className={s.syncHint}>
+            <CloudIcon size={18} />
+            <span className={s.txt}>
+              Notes are saved on this device only. Sign in to sync them across your phone and
+              computer.
+            </span>
+            <button className={`btn outline ${s.btnSm}`} onClick={() => setShowAuth(true)}>
+              Sign in to sync
+            </button>
+          </div>
+        )}
+
+        <Recorder
+          canRecord={canRecord}
+          onSave={handleSave}
+          onQuotaHit={() => setShowUpgrade(true)}
+        />
 
         <div className={s.libHead}>
           <div className={s.libTitle}>
             Your library
-            {hydrated && notes.length > 0 && <span className={s.libCount}>{notes.length}</span>}
+            {store.ready && store.notes.length > 0 && (
+              <span className={s.libCount}>{store.notes.length}</span>
+            )}
           </div>
-          {hydrated && notes.length > 0 && (
+          {store.ready && store.notes.length > 0 && (
             <div className={s.searchBox}>
               <SearchIcon size={18} />
               <input
@@ -128,10 +180,10 @@ export default function AppPage() {
           )}
         </div>
 
-        {!hydrated ? null : filtered.length === 0 ? (
+        {!store.ready ? null : filtered.length === 0 ? (
           <div className={s.empty}>
             <div className={s.emoji}>🎙️</div>
-            {notes.length === 0 ? (
+            {store.notes.length === 0 ? (
               <>
                 <h3>No notes yet</h3>
                 <p>Press the mic above and say something. It&apos;ll show up here.</p>
@@ -151,7 +203,10 @@ export default function AppPage() {
                   <div className={s.noteCardTitle}>{n.title}</div>
                   <button
                     className={s.delBtn}
-                    onClick={(e) => handleDelete(n.id, e)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void store.remove(n.id);
+                    }}
                     aria-label="Delete note"
                   >
                     <TrashIcon size={17} />
@@ -172,9 +227,22 @@ export default function AppPage() {
       </main>
 
       {active && (
-        <NoteModal note={active} onClose={() => setActive(null)} onSave={handleNoteSave} />
+        <NoteModal
+          note={active}
+          onClose={() => setActive(null)}
+          onSave={(id, title, body) => void store.update(id, title, body)}
+        />
       )}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onSuccess={() => {
+            setShowAuth(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
