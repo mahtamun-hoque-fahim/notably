@@ -52,6 +52,20 @@ npm run db:push      # push schema directly (dev only)
 npm run db:studio    # open Drizzle Studio
 ```
 
+## Roles & the admin console
+
+Notably has a staff/admin console at `/admin` — platform metrics, note charts, and a user table. Staff get a read-only view; admins can change plans/roles and delete users. Roles (`user`/`staff`/`admin`) are **server-only** and can't be set from the client.
+
+Grant the first admin after they've signed up:
+
+```bash
+DATABASE_URL="postgres://…" node scripts/set-role.mjs you@email.com admin
+# or grant staff
+DATABASE_URL="postgres://…" node scripts/set-role.mjs teammate@email.com staff
+```
+
+A "Console" link then appears in the account menu for staff/admins.
+
 ## Env vars
 
 The app degrades gracefully — each tier is independent:
@@ -83,10 +97,11 @@ Full details in `PLANNER.md` → Env Vars. See `.env.example`.
 
 ```
 src/
-├── app/          # routes: / (landing), /app, /api/auth, /api/transcribe, /api/webhooks/stripe
-├── components/   # Recorder, NoteModal, UpgradeModal, AuthModal, ExportModal, IntegrationsModal, Icons
-└── lib/          # notes, export, useSpeech, useMediaRecorder, useNotesStore, auth, stripe, db, actions (notes/billing/enrich/integrations)
+├── app/          # / (landing), /app, /admin (console), /api/*
+├── components/   # Recorder, NoteModal, UpgradeModal, AuthModal, ExportModal, IntegrationsModal, dashboard/*, Icons
+└── lib/          # notes, export, useSpeech, useMediaRecorder, useNotesStore, auth, stripe, db, actions (notes/billing/enrich/integrations/admin)
 drizzle/          # generated migrations
+scripts/          # set-role.mjs (bootstrap admin)
 ```
 
 See `PLANNER.md` for the full blueprint and `DESIGN_GUIDE.md` for the design system.

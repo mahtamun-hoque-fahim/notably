@@ -29,6 +29,12 @@ export const auth = betterAuth({
         defaultValue: "free",
         input: false, // not settable by the client at sign-up
       },
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "user",
+        input: false, // role is granted server-side only, never by the client
+      },
     },
   },
   session: {

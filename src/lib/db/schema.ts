@@ -20,6 +20,7 @@ export const user = pgTable("user", {
   image: text("image"),
   // App-specific: subscription tier. Wired via betterAuth additionalFields.
   plan: text("plan").notNull().default("free"), // 'free' | 'pro'
+  role: text("role").notNull().default("user"), // 'user' | 'staff' | 'admin'
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

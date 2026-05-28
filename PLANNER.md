@@ -13,7 +13,7 @@
 | Purpose | Turn spoken words into clean, searchable text notes — record, transcribe live, save. |
 | Target User | Students, journalists, founders, writers — anyone who thinks out loud. |
 | Key Value | Zero-friction voice capture in the browser. No install, no account to try, 5 free notes/day. |
-| Status | 🔄 In Progress — Phases 1–3 complete |
+| Status | 🔄 In Progress — Phases 1–4 complete (auth polish pending) |
 | Repo | `https://github.com/mahtamun-hoque-fahim/notably` |
 | Live URL | `(Vercel — to be connected)` |
 
@@ -53,6 +53,9 @@
 │   │   ├── app/
 │   │   │   ├── page.tsx            # The app: recorder + library + auth wiring
 │   │   │   └── app.module.css      # App-specific styles
+│   │   ├── admin/
+│   │   │   ├── page.tsx            # Staff/admin console route
+│   │   │   └── dashboard.module.css
 │   │   └── api/
 │   │       ├── auth/[...all]/route.ts   # Better Auth handler (GET/POST)
 │   │       ├── transcribe/route.ts      # Whisper fallback (Node, session-gated)
@@ -64,7 +67,11 @@
 │   │   ├── UpgradeModal.tsx        # Quota hit → starts Stripe checkout
 │   │   ├── AuthModal.tsx           # Sign in / create account
 │   │   ├── ExportModal.tsx         # Copy/download (all) + email/slack/notion (Pro)
-│   │   └── IntegrationsModal.tsx   # Manage Slack webhook + Notion connection
+│   │   ├── IntegrationsModal.tsx   # Manage Slack webhook + Notion connection
+│   │   └── dashboard/
+│   │       ├── DashboardConsole.tsx # Staff/admin console (overview + users)
+│   │       ├── Primitives.tsx       # StatCard, Card, BarChart, Donut, Pill
+│   │       └── DashIcons.tsx        # Console icon set
 │   └── lib/
 │       ├── notes.ts                # Local note CRUD, quota, formatters
 │       ├── export.ts               # Client export: markdown / copy / download
@@ -76,12 +83,15 @@
 │       ├── stripe.ts               # Lazy Stripe client + billing config
 │       ├── db/
 │       │   ├── index.ts            # Edge-safe Neon HTTP db client
-│       │   └── schema.ts           # Drizzle schema (auth + app + stripe + integrations)
+│       │   └── schema.ts           # Drizzle schema (auth + app + stripe + integrations + role)
 │       └── actions/
 │           ├── notes.ts            # Server Actions: note CRUD + server quota
 │           ├── billing.ts          # Server Actions: checkout + customer portal
 │           ├── enrich.ts           # Server Action: LLM title/summary/tags (Pro)
-│           └── integrations.ts     # Server Actions: connections + export dispatch
+│           ├── integrations.ts     # Server Actions: connections + export dispatch
+│           └── admin.ts            # Server Actions: dashboard metrics + admin mutations
+├── scripts/
+│   └── set-role.mjs                # Bootstrap an admin: grant a role by email
 ├── drizzle/                        # Generated migrations
 ├── drizzle.config.ts
 ├── .env.example
@@ -125,7 +135,7 @@
 **Signed-in mode: Neon (Postgres) via Drizzle** (`src/lib/db/schema.ts`).
 
 Better Auth core tables:
-- `user` — id, name, email (unique), emailVerified, image, **plan** ('free'|'pro'), **stripeCustomerId**, **stripeSubscriptionId**, timestamps
+- `user` — id, name, email (unique), emailVerified, image, **plan** ('free'|'pro'), **role** ('user'|'staff'|'admin'), **stripeCustomerId**, **stripeSubscriptionId**, timestamps
 - `session` — id, expiresAt, token (unique), ipAddress, userAgent, userId(fk), timestamps
 - `account` — id, accountId, providerId, userId(fk), tokens, password, timestamps
 - `verification` — id, identifier, value, expiresAt, timestamps
@@ -135,7 +145,7 @@ App tables:
 - `usage` — id, userId(fk, cascade), date ("YYYY-MM-DD" local), count · **unique(userId, date)** → server-enforced daily quota
 - `integrations` — id, userId(fk, cascade), provider ('slack'|'notion'), config (JSON string of secrets) · **unique(userId, provider)**
 
-Migrations: `0000` (initial), `0001` (stripe columns), `0002` (note summary + tags), `0003` (integrations). Apply with `npm run db:migrate`.
+Migrations: `0000` (initial), `0001` (stripe columns), `0002` (note summary + tags), `0003` (integrations), `0004` (user role). Apply with `npm run db:migrate`.
 
 **Local `Note` shape (`src/lib/notes.ts`):**
 ```ts
@@ -171,6 +181,9 @@ type Note = {
 | `saveSlackAction / saveNotionAction` | integrations | **Pro:** store a Slack webhook / Notion token+page |
 | `removeConnectionAction(provider)` | integrations | Disconnect a provider |
 | `exportNoteAction(id, target, email?)` | integrations | **Pro:** send a note to email / Slack / Notion |
+| `getDashboardDataAction()` | admin | **Staff/Admin:** platform metrics + 100 recent users |
+| `setUserPlanAction / setUserRoleAction` | admin | **Admin only:** change a user's plan / role |
+| `deleteUserAction(id)` | admin | **Admin only:** delete a user (cascades notes/usage/etc.) |
 
 **Webhook events handled:** `checkout.session.completed` → set plan `pro`; `customer.subscription.updated` → `pro` if active/trialing else `free`; `customer.subscription.deleted` → `free`.
 
@@ -208,7 +221,7 @@ See `.env.example`.
 | **Phase 1 — MVP** | ✅ Complete | Landing page; in-browser recorder (Web Speech); live transcript; save/edit/delete; search; 5/day quota + upgrade modal; localStorage persistence |
 | **Phase 2 — Accounts & sync** | ✅ Complete | Better Auth (email+password); Neon + Drizzle schema; Server Actions for notes & server-side quota; dual-mode store; cross-device sync; local→account import on sign-in |
 | **Phase 3 — Pro tier & fallback** | ✅ Complete | Stripe Checkout + customer portal + webhooks (plan sync); upgrade flow wired end-to-end; Pro badge + manage-subscription; Whisper `/api/transcribe` fallback + MediaRecorder capture for Firefox |
-| **Phase 4 — AI + export** | 🔄 In progress | ✅ LLM auto-title/summary/tags (Pro); ✅ export: copy/download Markdown (all) + email/Slack/Notion (Pro) + Integrations manager. ⏳ speaker labels; admin + staff dashboards; OAuth + email verification |
+| **Phase 4 — AI, export, console** | 🔄 Nearly done | ✅ LLM auto-title/summary/tags (Pro); ✅ export (copy/download + email/Slack/Notion); ✅ staff + admin console (metrics, charts, user management) at `/admin`, role-gated. ⏳ speaker labels; OAuth + email verification |
 
 ---
 
@@ -221,5 +234,6 @@ See `.env.example`.
 5. Add email verification + password reset (wire Resend).
 6. Add OAuth providers (GitHub / Google) via Better Auth `socialProviders`.
 7. Add rate limiting on auth + transcribe + enrich endpoints (Upstash / Arcjet).
-8. Finish Phase 4: speaker labels, admin + staff dashboards (per reference design).
-9. Optional: upgrade Slack/Notion from paste-credentials to full OAuth connect flows.
+8. **Grant the first admin:** after the user signs up, run `DATABASE_URL=… node scripts/set-role.mjs you@email.com admin` (roles are server-only and can't be self-assigned).
+9. Finish Phase 4: speaker labels for interviews; OAuth (GitHub/Google) + email verification.
+10. Optional: upgrade Slack/Notion from paste-credentials to full OAuth connect flows.

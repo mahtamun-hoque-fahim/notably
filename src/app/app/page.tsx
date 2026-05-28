@@ -16,6 +16,7 @@ import {
   MicFilled,
   PlugIcon,
   SearchIcon,
+  ShieldIcon,
   SparkleIcon,
   TrashIcon,
 } from "@/components/Icons";
@@ -44,6 +45,8 @@ export default function AppPage() {
 
   const isPro = store.plan === "pro";
   const canRecord = isPro || store.remaining > 0;
+  const sessionRole = (session?.user as { role?: string } | undefined)?.role ?? "user";
+  const isStaffOrAdmin = sessionRole === "staff" || sessionRole === "admin";
 
   // Close account dropdown on outside click.
   useEffect(() => {
@@ -188,6 +191,11 @@ export default function AppPage() {
                     >
                       <PlugIcon size={16} /> Integrations
                     </button>
+                    {isStaffOrAdmin && (
+                      <Link href="/admin" className={s.dropItem} onClick={() => setMenuOpen(false)}>
+                        <ShieldIcon size={16} /> Console
+                      </Link>
+                    )}
                     <button className={s.dropItem} onClick={handleSignOut}>
                       <LogOutIcon size={16} /> Sign out
                     </button>

@@ -201,3 +201,9 @@ export const PlugIcon = ({ size = 16, ...p }: IconProps) => (
     <path d="M12 17v5" />
   </svg>
 );
+
+export const ShieldIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" />
+  </svg>
+);

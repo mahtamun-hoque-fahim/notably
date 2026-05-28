@@ -25,6 +25,8 @@ Defined as CSS variables in `globals.css` and mirrored in `tailwind.config.ts`.
 | `--sage-deep` | `#2d5b3e` | Accent on hover, serif emphasis, CTA strip bg |
 | `--sage-soft` | `#dce5d4` | Accent borders, selection highlight |
 | `--sage-pale` | `#ecf1e7` | Accent-tinted fills (icon boxes, eyebrow pills) |
+| `--blue` | `#4a6b8a` | Staff-console accent (distinguishes staff from admin/sage) |
+| `--blue-pale` | `#e8eef4` | Staff badge / icon-tile fills |
 | `--line` | `rgba(28,36,32,0.08)` | Hairline borders |
 | `--line-strong` | `rgba(28,36,32,0.14)` | Stronger borders, dashed previews |
 | record red | `#d65656` | Recording state only (mic active, rec dot) |
@@ -106,6 +108,8 @@ Helper: `.serif { font-family: var(--font-instrument); font-style: italic; }`
 **Pro badge** — sage-pale pill with sparkle + "Pro" in the topbar for subscribers. **AI summary block** (note modal) — sage-pale rounded box: uppercase "AI summary" label with sparkle, italic serif summary line, and tag chips (`#tag`). **Tag chips on cards** — small sage-pale pills (max 3) under the card body. **Enhance button** — outline button with sparkle; shows a spinning ring while the LLM runs.
 
 **Export modal** — rows of icon-tiled options: copy/download (always) then a "Send to" group (email/Slack/Notion), each with a sage icon tile, title + description, and a right-side status (Pro tag · "Connect" · "Sending…" · check on success). **Integrations modal** — per-provider cards (Slack, Notion) with help text, credential inputs, and Connect/Disconnect; a green "Connected" marker when set.
+
+**Admin/staff console** (`/admin`) — left sidebar (brand, workspace chip tinted by role, nav, "back to app"), top bar with page title + role badge (ink for admin, blue for staff). Content uses StatCards (icon tile + big value + label + optional green delta), Cards (titled containers), a CSS bar chart (last bar = today in solid sage), an SVG donut (plan mix), and a user table with Pill status chips. Admin rows add inline plan/role selects + a danger-hover delete button; staff see the same table read-only.
 
 ---
 
