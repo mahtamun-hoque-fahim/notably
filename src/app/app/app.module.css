@@ -183,6 +183,12 @@
 /* Account control in topbar */
 .topRight { display: flex; align-items: center; gap: 12px; }
 .acct { display: flex; align-items: center; gap: 10px; }
+.proBadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; color: var(--sage-deep);
+  background: var(--sage-pale); border: 1px solid var(--sage-soft);
+  padding: 5px 11px; border-radius: 999px;
+}
 .avatar {
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--sage-pale); color: var(--sage-deep);

@@ -8,6 +8,13 @@
       "when": 1779949248545,
       "tag": "0000_magenta_quentin_quire",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779959491134,
+      "tag": "0001_sleepy_prism",
+      "breakpoints": true
     }
   ]
 }

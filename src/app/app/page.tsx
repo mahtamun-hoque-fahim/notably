@@ -9,13 +9,16 @@ import UpgradeModal from "@/components/UpgradeModal";
 import AuthModal from "@/components/AuthModal";
 import {
   CloudIcon,
+  CreditCardIcon,
   LogOutIcon,
   MicFilled,
   SearchIcon,
+  SparkleIcon,
   TrashIcon,
 } from "@/components/Icons";
 import { DAILY_FREE_LIMIT, formatDuration, formatRelative, type Note } from "@/lib/notes";
 import { useNotesStore } from "@/lib/useNotesStore";
+import { openPortalAction } from "@/lib/actions/billing";
 import { signOut, useSession } from "@/lib/auth-client";
 
 export default function AppPage() {
@@ -51,6 +54,26 @@ export default function AppPage() {
     setMenuOpen(false);
     window.location.reload();
   }
+
+  async function handleManageBilling() {
+    setMenuOpen(false);
+    const res = await openPortalAction();
+    if (res.ok) window.location.href = res.url;
+  }
+
+  // Clean the ?upgraded=1 query param after returning from Stripe Checkout.
+  // The webhook flips the plan; useSession/refresh will reflect it shortly.
+  // Also support ?upgrade=1 (from the landing pricing CTA) to open the modal.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upgraded") === "1") {
+      window.history.replaceState({}, "", "/app");
+    } else if (params.get("upgrade") === "1") {
+      setShowUpgrade(true);
+      window.history.replaceState({}, "", "/app");
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -102,6 +125,10 @@ export default function AppPage() {
               </button>
             )}
 
+            {store.ready && store.signedIn && isPro && (
+              <span className={s.proBadge}><SparkleIcon size={12} /> Pro</span>
+            )}
+
             {store.ready && store.signedIn && (
               <div className={s.acctMenu} ref={menuRef}>
                 <button className={s.acctBtn} onClick={() => setMenuOpen((o) => !o)}>
@@ -111,6 +138,18 @@ export default function AppPage() {
                 {menuOpen && (
                   <div className={s.dropdown}>
                     <div className={s.dropEmail}>{session?.user?.email}</div>
+                    {isPro ? (
+                      <button className={s.dropItem} onClick={handleManageBilling}>
+                        <CreditCardIcon size={16} /> Manage subscription
+                      </button>
+                    ) : (
+                      <button
+                        className={s.dropItem}
+                        onClick={() => { setMenuOpen(false); setShowUpgrade(true); }}
+                      >
+                        <SparkleIcon size={16} /> Upgrade to Pro
+                      </button>
+                    )}
                     <button className={s.dropItem} onClick={handleSignOut}>
                       <LogOutIcon size={16} /> Sign out
                     </button>
@@ -156,6 +195,7 @@ export default function AppPage() {
 
         <Recorder
           canRecord={canRecord}
+          signedIn={store.signedIn}
           onSave={handleSave}
           onQuotaHit={() => setShowUpgrade(true)}
         />
@@ -233,7 +273,13 @@ export default function AppPage() {
           onSave={(id, title, body) => void store.update(id, title, body)}
         />
       )}
-      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      {showUpgrade && (
+        <UpgradeModal
+          onClose={() => setShowUpgrade(false)}
+          signedIn={store.signedIn}
+          onNeedAuth={() => { setShowUpgrade(false); setShowAuth(true); }}
+        />
+      )}
       {showAuth && (
         <AuthModal
           onClose={() => setShowAuth(false)}

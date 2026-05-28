@@ -371,7 +371,7 @@ function Pricing() {
             </ul>
             <Link
               className="btn primary lg"
-              href="/app"
+              href="/app?upgrade=1"
               style={{ background: "var(--bg-elev)", color: "var(--ink)" }}
             >
               Go Pro <ArrowIcon />

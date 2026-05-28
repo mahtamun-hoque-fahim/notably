@@ -144,3 +144,10 @@ export const CloudIcon = ({ size = 16, ...p }: IconProps) => (
     <path d="M17.5 19a4.5 4.5 0 00.5-8.97A6 6 0 006 9.5a4.5 4.5 0 00-.5 9.5h12z" />
   </svg>
 );
+
+export const CreditCardIcon = ({ size = 16, ...p }: IconProps) => (
+  <svg {...base(size)} {...p}>
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <path d="M2 10h20" />
+  </svg>
+);

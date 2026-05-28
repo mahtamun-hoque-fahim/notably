@@ -9,6 +9,8 @@ Voice-to-text note taking. Press record, talk, get clean searchable text back �
 - Web Speech API (browser-native transcription, no API keys)
 - Better Auth (email + password) for accounts
 - Neon (Postgres) + Drizzle ORM for synced notes
+- Stripe (Checkout + portal + webhooks) for the Pro tier
+- OpenAI Whisper fallback (`/api/transcribe`) for browsers without Web Speech
 - localStorage fallback for guests
 - Geist Sans + Instrument Serif
 - Deploy: Vercel
@@ -51,22 +53,33 @@ npm run db:studio    # open Drizzle Studio
 
 ## Env vars
 
-Required only for accounts/sync (see `.env.example`):
+The app degrades gracefully — each tier is independent:
 
+**Guest mode** (no vars): record, save, search, daily quota, all local.
+
+**Accounts & sync:**
 - `DATABASE_URL` — Neon pooled connection (runtime)
 - `DATABASE_URL_UNPOOLED` — Neon direct connection (migrations)
 - `BETTER_AUTH_SECRET` — auth signing secret (`openssl rand -base64 32`)
 - `NEXT_PUBLIC_APP_URL` — canonical app URL
 
-Full details in `PLANNER.md` → Env Vars.
+**Pro tier (Stripe):**
+- `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` (the $5/mo recurring price), `STRIPE_WEBHOOK_SECRET`
+- Add a Stripe webhook → `/api/webhooks/stripe` for `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+- Enable the customer portal in the Stripe dashboard
+
+**Whisper fallback (Firefox etc.):**
+- `OPENAI_API_KEY` — enables `/api/transcribe`
+
+Full details in `PLANNER.md` → Env Vars. See `.env.example`.
 
 ## Folder structure
 
 ```
 src/
-├── app/          # routes: / (landing), /app (recorder + library), /api/auth
+├── app/          # routes: / (landing), /app, /api/auth, /api/transcribe, /api/webhooks/stripe
 ├── components/   # Recorder, NoteModal, UpgradeModal, AuthModal, Icons
-└── lib/          # notes, useSpeech, useNotesStore, auth, db, actions
+└── lib/          # notes, useSpeech, useMediaRecorder, useNotesStore, auth, stripe, db, actions
 drizzle/          # generated migrations
 ```
 

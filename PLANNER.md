@@ -13,7 +13,7 @@
 | Purpose | Turn spoken words into clean, searchable text notes — record, transcribe live, save. |
 | Target User | Students, journalists, founders, writers — anyone who thinks out loud. |
 | Key Value | Zero-friction voice capture in the browser. No install, no account to try, 5 free notes/day. |
-| Status | 🔄 In Progress — Phases 1 & 2 complete |
+| Status | 🔄 In Progress — Phases 1–3 complete |
 | Repo | `https://github.com/mahtamun-hoque-fahim/notably` |
 | Live URL | `(Vercel — to be connected)` |
 
@@ -27,8 +27,14 @@
 - Transcription: **Web Speech API** (browser-native `SpeechRecognition`) — zero cost, no keys
 - Persistence: **dual-mode** — localStorage for guests, **Neon (Postgres) + Drizzle ORM** for signed-in users
 - Auth: **Better Auth** (email + password, Drizzle adapter, 30-day sessions)
+- Billing: **Stripe** Checkout + customer portal + webhooks (Pro subscription)
+- Fallback transcription: **OpenAI Whisper** (`/api/transcribe`) for browsers without Web Speech
 - Fonts: Geist Sans (`geist` pkg) + Instrument Serif (`next/font/google`)
 - Deployment: Vercel (primary)
+
+**Transcription paths:**
+- **Primary** — Web Speech API, live, free, client-only (Chrome/Edge/Safari).
+- **Fallback** — Firefox & others: MediaRecorder captures audio, posts to `/api/transcribe`, Whisper returns text. Session-gated (costs money per call); degrades to manual typing if not signed in or not configured.
 
 **Data modes:**
 - **Guest** — notes live in `localStorage`, quota tracked locally, resets at local midnight.
@@ -47,24 +53,29 @@
 │   │   │   ├── page.tsx            # The app: recorder + library + auth wiring
 │   │   │   └── app.module.css      # App-specific styles
 │   │   └── api/
-│   │       └── auth/[...all]/route.ts  # Better Auth handler (GET/POST)
+│   │       ├── auth/[...all]/route.ts   # Better Auth handler (GET/POST)
+│   │       ├── transcribe/route.ts      # Whisper fallback (Node, session-gated)
+│   │       └── webhooks/stripe/route.ts # Stripe webhook → flips user.plan
 │   ├── components/
 │   │   ├── Icons.tsx               # Shared SVG icon set
-│   │   ├── Recorder.tsx            # Record → live transcript → review → save
+│   │   ├── Recorder.tsx            # Web Speech + Whisper fallback + manual typing
 │   │   ├── NoteModal.tsx           # View / edit a saved note
-│   │   ├── UpgradeModal.tsx        # Shown when daily quota is hit
+│   │   ├── UpgradeModal.tsx        # Quota hit → starts Stripe checkout
 │   │   └── AuthModal.tsx           # Sign in / create account
 │   └── lib/
 │       ├── notes.ts                # Local note CRUD, quota, formatters
-│       ├── useSpeech.ts            # Web Speech API hook
+│       ├── useSpeech.ts            # Web Speech API hook (primary)
+│       ├── useMediaRecorder.ts     # MediaRecorder → Whisper hook (fallback)
 │       ├── useNotesStore.ts        # Dual-mode store (local ⇄ server)
 │       ├── auth.ts                 # Better Auth server instance
 │       ├── auth-client.ts          # Better Auth React client
+│       ├── stripe.ts               # Lazy Stripe client + billing config
 │       ├── db/
 │       │   ├── index.ts            # Edge-safe Neon HTTP db client
-│       │   └── schema.ts           # Drizzle schema (auth + app tables)
+│       │   └── schema.ts           # Drizzle schema (auth + app + stripe cols)
 │       └── actions/
-│           └── notes.ts            # Server Actions: note CRUD + server quota
+│           ├── notes.ts            # Server Actions: note CRUD + server quota
+│           └── billing.ts          # Server Actions: checkout + customer portal
 ├── drizzle/                        # Generated migrations
 ├── drizzle.config.ts
 ├── .env.example
@@ -108,7 +119,7 @@
 **Signed-in mode: Neon (Postgres) via Drizzle** (`src/lib/db/schema.ts`).
 
 Better Auth core tables:
-- `user` — id, name, email (unique), emailVerified, image, **plan** ('free'|'pro'), createdAt, updatedAt
+- `user` — id, name, email (unique), emailVerified, image, **plan** ('free'|'pro'), **stripeCustomerId**, **stripeSubscriptionId**, timestamps
 - `session` — id, expiresAt, token (unique), ipAddress, userAgent, userId(fk), timestamps
 - `account` — id, accountId, providerId, userId(fk), tokens, password, timestamps
 - `verification` — id, identifier, value, expiresAt, timestamps
@@ -117,7 +128,7 @@ App tables:
 - `notes` — id, userId(fk, cascade), title, body, durationMs, lang, createdAt, updatedAt · index on userId
 - `usage` — id, userId(fk, cascade), date ("YYYY-MM-DD" local), count · **unique(userId, date)** → server-enforced daily quota
 
-Migration generated at `drizzle/0000_*.sql`. Apply with `npm run db:migrate`.
+Migrations: `drizzle/0000_*.sql` (initial), `drizzle/0001_*.sql` (stripe columns). Apply with `npm run db:migrate`.
 
 **Local `Note` shape (`src/lib/notes.ts`):**
 ```ts
@@ -134,18 +145,22 @@ type Note = {
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET/POST | `/api/auth/[...all]` | — | Better Auth (sign up, sign in, session, sign out) |
+| POST | `/api/transcribe` | session | Whisper fallback for non-WebSpeech browsers |
+| POST | `/api/webhooks/stripe` | signature | Flip `user.plan` on subscription events |
 
-**Server Actions** (`src/lib/actions/notes.ts`, all session-gated):
-| Action | Purpose |
-|---|---|
-| `listNotesAction()` | Fetch the signed-in user's notes |
-| `getUsageAction(localDate)` | Today's used/remaining + plan |
-| `createNoteAction(...)` | Create a note; enforces free quota server-side |
-| `updateNoteAction(...)` | Edit a note (ownership-checked) |
-| `deleteNoteAction(id)` | Delete a note (ownership-checked) |
-| `importNotesAction(items)` | Bulk-migrate local notes on first sign-in (quota-exempt) |
+**Server Actions** (session-gated):
+| Action | File | Purpose |
+|---|---|---|
+| `listNotesAction()` | notes | Fetch the user's notes |
+| `getUsageAction(localDate)` | notes | Today's used/remaining + plan |
+| `createNoteAction(...)` | notes | Create a note; enforces free quota server-side |
+| `updateNoteAction(...)` | notes | Edit a note (ownership-checked) |
+| `deleteNoteAction(id)` | notes | Delete a note (ownership-checked) |
+| `importNotesAction(items)` | notes | Bulk-migrate local notes on first sign-in (quota-exempt) |
+| `startCheckoutAction()` | billing | Create a Stripe Checkout session → returns URL |
+| `openPortalAction()` | billing | Create a Stripe customer-portal session → returns URL |
 
-**Phase 3 (planned):** `/api/transcribe` (Whisper fallback), `/api/checkout` + `/api/webhooks/stripe` (Pro billing).
+**Webhook events handled:** `checkout.session.completed` → set plan `pro`; `customer.subscription.updated` → `pro` if active/trialing else `free`; `customer.subscription.deleted` → `free`.
 
 ---
 
@@ -156,13 +171,16 @@ type Note = {
 
 | Name | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | yes | Neon pooled connection (app runtime) |
-| `DATABASE_URL_UNPOOLED` | yes | Neon direct connection (migrations only) |
-| `BETTER_AUTH_SECRET` | yes | Better Auth signing secret (`openssl rand -base64 32`) |
-| `NEXT_PUBLIC_APP_URL` | yes | Canonical app URL (Better Auth base URL) |
-| `OPENAI_API_KEY` | Phase 3 | Whisper transcription fallback |
-| `STRIPE_SECRET_KEY` | Phase 3 | Pro billing |
-| `STRIPE_WEBHOOK_SECRET` | Phase 3 | Stripe webhook verification |
+| `DATABASE_URL` | accounts | Neon pooled connection (app runtime) |
+| `DATABASE_URL_UNPOOLED` | accounts | Neon direct connection (migrations only) |
+| `BETTER_AUTH_SECRET` | accounts | Better Auth signing secret (`openssl rand -base64 32`) |
+| `NEXT_PUBLIC_APP_URL` | accounts | Canonical app URL (Better Auth base URL, Stripe redirects) |
+| `STRIPE_SECRET_KEY` | Pro | Stripe secret key |
+| `STRIPE_PRICE_ID` | Pro | Price ID for the $5/mo Pro subscription |
+| `STRIPE_WEBHOOK_SECRET` | Pro | Verifies incoming Stripe webhooks |
+| `OPENAI_API_KEY` | fallback | Whisper transcription for non-WebSpeech browsers |
+
+Tiers degrade independently: no DB → guest mode; DB but no Stripe → accounts + sync, no Pro; no OpenAI key → no cloud transcription fallback (manual typing instead).
 
 See `.env.example`.
 
@@ -174,17 +192,18 @@ See `.env.example`.
 |---|---|---|
 | **Phase 1 — MVP** | ✅ Complete | Landing page; in-browser recorder (Web Speech); live transcript; save/edit/delete; search; 5/day quota + upgrade modal; localStorage persistence |
 | **Phase 2 — Accounts & sync** | ✅ Complete | Better Auth (email+password); Neon + Drizzle schema; Server Actions for notes & server-side quota; dual-mode store; cross-device sync; local→account import on sign-in |
-| **Phase 3 — Pro tier** | ⏳ | Stripe billing; unlimited + 4h notes; Whisper fallback; auto-titles/summaries/tags via LLM; speaker labels |
-| **Phase 4 — Power features** | ⏳ | Notion/Slack/email export; admin + staff dashboards (per design ref); offline queue; OAuth + email verification |
+| **Phase 3 — Pro tier & fallback** | ✅ Complete | Stripe Checkout + customer portal + webhooks (plan sync); upgrade flow wired end-to-end; Pro badge + manage-subscription; Whisper `/api/transcribe` fallback + MediaRecorder capture for Firefox |
+| **Phase 4 — Power features** | ⏳ | Notion/Slack/email export; auto-titles/summaries/tags via LLM; speaker labels; admin + staff dashboards (per design ref); offline queue; OAuth + email verification |
 
 ---
 
 ## Next Steps
 
-1. **Provision Neon** + set `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` in Vercel.
-2. Run `npm run db:migrate` against the Neon DB to create the tables.
-3. Verify the full auth flow on the deploy (sign up → record → sync → sign out → sign in elsewhere).
-4. Add email verification + a password-reset flow (wire Resend for transactional email).
-5. Add OAuth providers (GitHub / Google) via Better Auth `socialProviders`.
-6. Add rate limiting on the auth endpoints (Upstash / Arcjet).
-7. Begin Phase 3: Stripe checkout → flip `user.plan` to `pro` and lift the cap; Whisper `/api/transcribe` fallback for Firefox.
+1. **Provision Neon** + set `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `BETTER_AUTH_SECRET`, `NEXT_PUBLIC_APP_URL` in Vercel; run `npm run db:migrate`.
+2. **Stripe setup:** create a $5/mo recurring Price, set `STRIPE_SECRET_KEY` + `STRIPE_PRICE_ID`; add a webhook endpoint pointing at `/api/webhooks/stripe` for `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`; set `STRIPE_WEBHOOK_SECRET`. Enable the customer portal in the Stripe dashboard.
+3. **Whisper:** set `OPENAI_API_KEY` to enable cloud transcription for Firefox users.
+4. Test full flows: sign up → record → sync; quota hit → checkout → Pro → manage/cancel; Firefox → record → Whisper.
+5. Add email verification + password reset (wire Resend).
+6. Add OAuth providers (GitHub / Google) via Better Auth `socialProviders`.
+7. Add rate limiting on auth + transcribe endpoints (Upstash / Arcjet).
+8. Begin Phase 4: LLM auto-titles/summaries/tags, export integrations.
